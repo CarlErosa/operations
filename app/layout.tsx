@@ -14,10 +14,11 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'ICpEP.SE Ops',
+  title: 'ICPEP.SE SOP',
   description:
-    'Internal operations dashboard for the ICpEP.SE executive team — track deliverables, events, documents, decisions, and escalations.',
+    'Internal operations dashboard for the ICPEP.SE executive team — track deliverables, events, documents, decisions, and escalations.',
   generator: 'v0.app',
+  icons: { icon: '/icpep_logo.jpg' },
 }
 
 export const viewport: Viewport = {

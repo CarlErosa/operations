@@ -17,12 +17,14 @@ export const DEPARTMENTS: Department[] = [
   "Graphics",
 ]
 
-export type TrackerStatus = "Not Started" | "In Progress" | "Blocked" | "Done"
+export type TrackerStatus = "Not Started" | "In Progress" | "Blocked" | "Up for Review" | "Up for Approval" | "Done"
 
 export const TRACKER_STATUSES: TrackerStatus[] = [
   "Not Started",
   "In Progress",
   "Blocked",
+  "Up for Review",
+  "Up for Approval",
   "Done",
 ]
 

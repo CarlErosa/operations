@@ -6,6 +6,8 @@ export const statusTone: Record<TrackerStatus, BadgeTone> = {
   "Not Started": "neutral",
   "In Progress": "info",
   Blocked: "danger",
+  "Up for Review": "warning",
+  "Up for Approval": "brand",
   Done: "success",
 }
 

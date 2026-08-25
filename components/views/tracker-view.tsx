@@ -60,7 +60,7 @@ export function TrackerView() {
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="rounded-lg border border-border">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium text-muted-foreground">
@@ -190,7 +190,7 @@ function StatusEditor({
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-md border border-border bg-popover shadow-md"
+          className="absolute left-0 top-full z-30 mt-1 w-40 rounded-md border border-border bg-popover shadow-md"
         >
           {TRACKER_STATUSES.map((s) => (
             <button

@@ -1,5 +1,6 @@
 "use client"
 
+import { createClient } from "@/lib/supabase/client"
 import {
   createContext,
   useCallback,
@@ -8,7 +9,6 @@ import {
   type ReactNode,
 } from "react"
 import useSWR from "swr"
-import { createClient } from "@/lib/supabase/client"
 import {
   mapActivity,
   mapDecision,
@@ -162,7 +162,13 @@ export function StoreProvider({
 
       updateTrackerStatus: async (id, status) => {
         const item = tracker.find((t) => t.id === id)
-        await supabase.from("tracker_items").update({ status }).eq("id", id)
+        const res = await supabase.from("tracker_items").update({ status }).eq("id", id)
+        if (res.error) {
+          console.error("Failed to update tracker status:", res.error)
+          // still refresh so UI reflects server state
+          refresh()
+          return
+        }
         if (item)
           await log(`set "${item.deliverable}" to ${status}`, "status", currentUserName)
         refresh()

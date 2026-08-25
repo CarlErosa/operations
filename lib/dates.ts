@@ -4,7 +4,9 @@ import { STAGE_LEAD_WEEKS, type EventStage } from "./types"
 export const TODAY = new Date("2026-08-25T00:00:00")
 
 export function parseDate(iso: string): Date {
-  return new Date(iso + "T00:00:00")
+  if (!iso) return TODAY
+  const d = new Date(iso + "T00:00:00")
+  return isNaN(d.getTime()) ? TODAY : d
 }
 
 export function formatDate(iso: string): string {
