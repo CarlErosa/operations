@@ -115,6 +115,7 @@ export interface DocumentItem {
   approvedBy?: string
   versionDate: string
   failReason?: string
+  signedFileName?: string
   escalations: Escalation[]
 }
 

@@ -59,7 +59,7 @@ interface StoreValue {
   reviewDocument: (id: string) => void
   passDocument: (id: string) => void
   failDocument: (id: string, reason: string) => void
-  approveDocument: (id: string) => void
+  approveDocument: (id: string, signedFileName: string) => void
   addDocument: (input: {
     title: string
     type: DocumentType
@@ -163,12 +163,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }),
         )
       },
-      approveDocument: (id) => {
+      approveDocument: (id, signedFileName) => {
         setDocuments((prev) =>
           prev.map((d) => {
             if (d.id !== id || d.stage !== "Up for Approval") return d
-            log(`approved ${d.title}`, "stage", role)
-            return { ...d, stage: "Approved", approvedBy: "President" }
+            log(`approved & e-signed ${d.title}`, "stage", role)
+            return {
+              ...d,
+              stage: "Approved",
+              approvedBy: "President",
+              signedFileName,
+            }
           }),
         )
       },

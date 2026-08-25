@@ -1,7 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Eye, Flag, Plus, RotateCcw, Send, ThumbsUp, X } from "lucide-react"
+import {
+  Check,
+  Eye,
+  FileCheck,
+  Flag,
+  Plus,
+  RotateCcw,
+  Send,
+  ThumbsUp,
+  Upload,
+  X,
+} from "lucide-react"
 import { useStore } from "@/lib/store"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
@@ -29,7 +40,9 @@ export function DocumentsView() {
   const [formOpen, setFormOpen] = useState(false)
   const [viewId, setViewId] = useState<string | null>(null)
   const [failId, setFailId] = useState<string | null>(null)
+  const [approveId, setApproveId] = useState<string | null>(null)
   const viewedDoc = documents.find((d) => d.id === viewId) ?? null
+  const approveDoc = documents.find((d) => d.id === approveId) ?? null
   const canReview = role === "President" || role === "Reviewer"
   const canApprove = role === "President"
 
@@ -71,7 +84,7 @@ export function DocumentsView() {
                       onReview={() => reviewDocument(doc.id)}
                       onPass={() => passDocument(doc.id)}
                       onFail={() => setFailId(doc.id)}
-                      onApprove={() => approveDocument(doc.id)}
+                      onApprove={() => setApproveId(doc.id)}
                       onView={() => setViewId(doc.id)}
                     />
                   ))}
@@ -95,6 +108,110 @@ export function DocumentsView() {
           onClose={() => setFailId(null)}
         />
       )}
+      {approveDoc && (
+        <ApproveForm
+          doc={approveDoc}
+          onSubmit={(fileName) => {
+            approveDocument(approveDoc.id, fileName)
+            setApproveId(null)
+          }}
+          onClose={() => setApproveId(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function ApproveForm({
+  doc,
+  onSubmit,
+  onClose,
+}: {
+  doc: DocumentItem
+  onSubmit: (fileName: string) => void
+  onClose: () => void
+}) {
+  const [fileName, setFileName] = useState("")
+  const [error, setError] = useState("")
+
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setError("Please upload a PDF file.")
+      setFileName("")
+      return
+    }
+    setError("")
+    setFileName(file.name)
+  }
+
+  function submit() {
+    if (!fileName) {
+      setError("Upload the signed PDF before approving.")
+      return
+    }
+    onSubmit(fileName)
+  }
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-foreground/20" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-md overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <h2 className="text-sm font-semibold">Approve &amp; e-sign</h2>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+            <X />
+          </Button>
+        </div>
+        <div className="space-y-3 p-5">
+          <p className="text-sm text-muted-foreground">
+            Re-upload{" "}
+            <span className="font-medium text-foreground">{doc.title}</span> as a
+            signed PDF containing your e-signature to finalize approval.
+          </p>
+          <Field label="Signed PDF">
+            <label
+              className={cn(
+                "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border bg-background px-4 py-6 text-center transition-colors hover:border-ring",
+                fileName && "border-success/50 bg-success/5",
+              )}
+            >
+              {fileName ? (
+                <>
+                  <FileCheck className="size-6 text-success" />
+                  <span className="text-sm font-medium text-foreground">{fileName}</span>
+                  <span className="text-xs text-muted-foreground">Click to replace</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="size-6 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">
+                    Upload signed PDF
+                  </span>
+                  <span className="text-xs text-muted-foreground">PDF only</span>
+                </>
+              )}
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                className="sr-only"
+                onChange={onFile}
+              />
+            </label>
+          </Field>
+          {error && <p className="text-sm text-danger">{error}</p>}
+        </div>
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3.5">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={submit} disabled={!fileName}>
+            <Check />
+            Approve &amp; Sign
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -439,6 +556,18 @@ function DocumentDetail({
             <h3 className="mb-2 text-xs font-medium text-foreground">Signatory chain</h3>
             <SignatoryChain doc={doc} />
           </div>
+
+          {doc.signedFileName && (
+            <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/5 p-3">
+              <FileCheck className="size-5 shrink-0 text-success" />
+              <div className="min-w-0">
+                <h3 className="text-xs font-medium text-foreground">Signed PDF</h3>
+                <p className="truncate text-sm text-muted-foreground">
+                  {doc.signedFileName}
+                </p>
+              </div>
+            </div>
+          )}
 
           {doc.stage === "Draft" && doc.failReason && (
             <div className="rounded-md border border-danger/30 bg-danger/5 p-3">
