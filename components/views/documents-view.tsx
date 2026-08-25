@@ -1,22 +1,36 @@
 "use client"
 
-import { Check, Flag } from "lucide-react"
+import { useState } from "react"
+import { Check, Flag, Plus, X } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/dates"
-import { DOCUMENT_STAGES, type DocumentItem } from "@/lib/types"
+import {
+  DOCUMENT_STAGES,
+  DOCUMENT_TYPES,
+  type DocumentItem,
+  type DocumentStage,
+  type DocumentType,
+} from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 export function DocumentsView() {
   const { documents, role, approveDocument } = useStore()
+  const [formOpen, setFormOpen] = useState(false)
 
   return (
     <div>
       <PageHeader
         title="Documents"
         description="Document pipeline grouped by stage, with the signatory chain for each item."
+        actions={
+          <Button size="sm" onClick={() => setFormOpen(true)}>
+            <Plus />
+            Add Document
+          </Button>
+        }
       />
       <div className="space-y-6 p-6">
         {DOCUMENT_STAGES.map((stage) => {
@@ -48,6 +62,126 @@ export function DocumentsView() {
           )
         })}
       </div>
+
+      {formOpen && <DocumentForm onClose={() => setFormOpen(false)} />}
+    </div>
+  )
+}
+
+function DocumentForm({ onClose }: { onClose: () => void }) {
+  const { addDocument } = useStore()
+  const [title, setTitle] = useState("")
+  const [type, setType] = useState<DocumentType>(DOCUMENT_TYPES[0])
+  const [stage, setStage] = useState<DocumentStage>("Draft")
+  const [preparedBy, setPreparedBy] = useState("")
+  const [error, setError] = useState("")
+
+  function submit() {
+    if (!title.trim()) {
+      setError("A document title is required.")
+      return
+    }
+    if (!preparedBy.trim()) {
+      setError("A preparer is required.")
+      return
+    }
+    addDocument({
+      title: title.trim(),
+      type,
+      stage,
+      preparedBy: preparedBy.trim(),
+    })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-foreground/20" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <h2 className="text-sm font-semibold">Add a document</h2>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+            <X />
+          </Button>
+        </div>
+
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-5">
+          <Field label="Title">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Document title"
+              className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Type">
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value as DocumentType)}
+                className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {DOCUMENT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Stage">
+              <select
+                value={stage}
+                onChange={(e) => setStage(e.target.value as DocumentStage)}
+                className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {DOCUMENT_STAGES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <Field label="Prepared by">
+            <input
+              value={preparedBy}
+              onChange={(e) => setPreparedBy(e.target.value)}
+              placeholder="Officer name"
+              className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </Field>
+
+          {error && <p className="text-sm text-danger">{error}</p>}
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3.5">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={submit}>
+            Add document
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium text-foreground">
+        {label}
+      </label>
+      {children}
     </div>
   )
 }

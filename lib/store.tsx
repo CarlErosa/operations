@@ -20,6 +20,8 @@ import type {
   Decision,
   DecisionTier,
   DocumentItem,
+  DocumentStage,
+  DocumentType,
   EscalationReason,
   EventItem,
   EventStage,
@@ -54,6 +56,12 @@ interface StoreValue {
   updateTrackerStatus: (id: string, status: TrackerStatus) => void
   advanceEventStage: (id: string) => void
   approveDocument: (id: string) => void
+  addDocument: (input: {
+    title: string
+    type: DocumentType
+    stage: DocumentStage
+    preparedBy: string
+  }) => void
   addDecision: (input: {
     description: string
     tier: DecisionTier
@@ -118,6 +126,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             return { ...d, stage: "Archived", approvedBy: "President" }
           }),
         )
+      },
+      addDocument: ({ title, type, stage, preparedBy }) => {
+        const newDoc: DocumentItem = {
+          id: uid("doc"),
+          title,
+          type,
+          stage,
+          preparedBy,
+          versionDate: TODAY.toISOString().slice(0, 10),
+          escalations: [],
+        }
+        setDocuments((prev) => [newDoc, ...prev])
+        log(`added document "${title}" (${stage})`, "stage", role)
       },
       addDecision: ({ description, tier, decidedBy, reason, escalationReasons }) => {
         const newDecision: Decision = {
