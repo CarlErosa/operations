@@ -56,7 +56,7 @@ interface StoreValue {
   updateTrackerStatus: (id: string, status: TrackerStatus) => void
   advanceEventStage: (id: string) => void
   sendForReview: (id: string) => void
-  reviewDocument: (id: string) => void
+  reviewDocument: (id: string, signedFileName: string) => void
   passDocument: (id: string) => void
   failDocument: (id: string, reason: string) => void
   approveDocument: (id: string, signedFileName: string) => void
@@ -131,12 +131,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }),
         )
       },
-      reviewDocument: (id) => {
+      reviewDocument: (id, signedFileName) => {
         setDocuments((prev) =>
           prev.map((d) => {
             if (d.id !== id || d.stage !== "Reviewing") return d
-            log(`reviewed ${d.title}`, "stage", role)
-            return { ...d, stage: "Reviewed", reviewedBy: role }
+            log(`reviewed & e-signed ${d.title}`, "stage", role)
+            return {
+              ...d,
+              stage: "Reviewed",
+              reviewedBy: role,
+              reviewedFileName: signedFileName,
+            }
           }),
         )
       },
@@ -158,6 +163,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               ...d,
               stage: "Draft",
               reviewedBy: undefined,
+              reviewedFileName: undefined,
               failReason: reason,
             }
           }),

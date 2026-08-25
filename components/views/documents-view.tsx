@@ -40,8 +40,10 @@ export function DocumentsView() {
   const [formOpen, setFormOpen] = useState(false)
   const [viewId, setViewId] = useState<string | null>(null)
   const [failId, setFailId] = useState<string | null>(null)
+  const [reviewId, setReviewId] = useState<string | null>(null)
   const [approveId, setApproveId] = useState<string | null>(null)
   const viewedDoc = documents.find((d) => d.id === viewId) ?? null
+  const reviewDoc = documents.find((d) => d.id === reviewId) ?? null
   const approveDoc = documents.find((d) => d.id === approveId) ?? null
   const canReview = role === "President" || role === "Reviewer"
   const canApprove = role === "President"
@@ -81,7 +83,7 @@ export function DocumentsView() {
                       canReview={canReview}
                       canApprove={canApprove}
                       onSend={() => sendForReview(doc.id)}
-                      onReview={() => reviewDocument(doc.id)}
+                      onReview={() => setReviewId(doc.id)}
                       onPass={() => passDocument(doc.id)}
                       onFail={() => setFailId(doc.id)}
                       onApprove={() => setApproveId(doc.id)}
@@ -108,9 +110,25 @@ export function DocumentsView() {
           onClose={() => setFailId(null)}
         />
       )}
+      {reviewDoc && (
+        <SignForm
+          doc={reviewDoc}
+          title="Mark reviewed & e-sign"
+          description="containing your reviewer e-signature to complete the review."
+          submitLabel="Reviewed & Sign"
+          onSubmit={(fileName) => {
+            reviewDocument(reviewDoc.id, fileName)
+            setReviewId(null)
+          }}
+          onClose={() => setReviewId(null)}
+        />
+      )}
       {approveDoc && (
-        <ApproveForm
+        <SignForm
           doc={approveDoc}
+          title="Approve & e-sign"
+          description="containing your e-signature to finalize approval."
+          submitLabel="Approve & Sign"
           onSubmit={(fileName) => {
             approveDocument(approveDoc.id, fileName)
             setApproveId(null)
@@ -122,12 +140,18 @@ export function DocumentsView() {
   )
 }
 
-function ApproveForm({
+function SignForm({
   doc,
+  title,
+  description,
+  submitLabel,
   onSubmit,
   onClose,
 }: {
   doc: DocumentItem
+  title: string
+  description: string
+  submitLabel: string
   onSubmit: (fileName: string) => void
   onClose: () => void
 }) {
@@ -148,7 +172,7 @@ function ApproveForm({
 
   function submit() {
     if (!fileName) {
-      setError("Upload the signed PDF before approving.")
+      setError("Upload the signed PDF before continuing.")
       return
     }
     onSubmit(fileName)
@@ -159,7 +183,7 @@ function ApproveForm({
       <div className="absolute inset-0 bg-foreground/20" onClick={onClose} aria-hidden />
       <div className="relative w-full max-w-md overflow-hidden rounded-lg border border-border bg-card shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
-          <h2 className="text-sm font-semibold">Approve &amp; e-sign</h2>
+          <h2 className="text-sm font-semibold">{title}</h2>
           <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
             <X />
           </Button>
@@ -168,7 +192,7 @@ function ApproveForm({
           <p className="text-sm text-muted-foreground">
             Re-upload{" "}
             <span className="font-medium text-foreground">{doc.title}</span> as a
-            signed PDF containing your e-signature to finalize approval.
+            signed PDF {description}
           </p>
           <Field label="Signed PDF">
             <label
@@ -208,7 +232,7 @@ function ApproveForm({
           </Button>
           <Button size="sm" onClick={submit} disabled={!fileName}>
             <Check />
-            Approve &amp; Sign
+            {submitLabel}
           </Button>
         </div>
       </div>
@@ -557,15 +581,14 @@ function DocumentDetail({
             <SignatoryChain doc={doc} />
           </div>
 
-          {doc.signedFileName && (
-            <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/5 p-3">
-              <FileCheck className="size-5 shrink-0 text-success" />
-              <div className="min-w-0">
-                <h3 className="text-xs font-medium text-foreground">Signed PDF</h3>
-                <p className="truncate text-sm text-muted-foreground">
-                  {doc.signedFileName}
-                </p>
-              </div>
+          {(doc.reviewedFileName || doc.signedFileName) && (
+            <div className="space-y-2">
+              {doc.reviewedFileName && (
+                <SignedFile label="Reviewer signed PDF" fileName={doc.reviewedFileName} />
+              )}
+              {doc.signedFileName && (
+                <SignedFile label="Approver signed PDF" fileName={doc.signedFileName} />
+              )}
             </div>
           )}
 
@@ -601,6 +624,18 @@ function DocumentDetail({
             Close
           </Button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function SignedFile({ label, fileName }: { label: string; fileName: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/5 p-3">
+      <FileCheck className="size-5 shrink-0 text-success" />
+      <div className="min-w-0">
+        <h3 className="text-xs font-medium text-foreground">{label}</h3>
+        <p className="truncate text-sm text-muted-foreground">{fileName}</p>
       </div>
     </div>
   )
