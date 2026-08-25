@@ -1,31 +1,31 @@
-"use client"
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import { OpsShell } from "@/components/ops-shell"
+import type { Role } from "@/lib/types"
 
-import { useState } from "react"
-import { StoreProvider } from "@/lib/store"
-import { AppSidebar, type ViewKey } from "@/components/app-sidebar"
-import { DashboardView } from "@/components/views/dashboard-view"
-import { TrackerView } from "@/components/views/tracker-view"
-import { EventsView } from "@/components/views/events-view"
-import { DocumentsView } from "@/components/views/documents-view"
-import { DecisionsView } from "@/components/views/decisions-view"
-import { EscalationsView } from "@/components/views/escalations-view"
+export default async function Page() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-export default function Page() {
-  const [view, setView] = useState<ViewKey>("dashboard")
+  if (!user) redirect("/auth/login")
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  const role: Role =
+    profile?.role === "President" || profile?.role === "Reviewer"
+      ? profile.role
+      : "Officer"
 
   return (
-    <StoreProvider>
-      <div className="flex h-dvh overflow-hidden bg-background text-foreground">
-        <AppSidebar active={view} onNavigate={setView} />
-        <main className="flex-1 overflow-y-auto">
-          {view === "dashboard" && <DashboardView onNavigate={setView} />}
-          {view === "tracker" && <TrackerView />}
-          {view === "events" && <EventsView />}
-          {view === "documents" && <DocumentsView />}
-          {view === "decisions" && <DecisionsView />}
-          {view === "escalations" && <EscalationsView />}
-        </main>
-      </div>
-    </StoreProvider>
+    <OpsShell
+      role={role}
+      currentUserName={profile?.full_name || user.email || "Signed-in user"}
+    />
   )
 }

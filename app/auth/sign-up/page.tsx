@@ -6,14 +6,11 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { AuthShell, Field, inputClass } from "@/components/auth/auth-shell"
-import { ROLES, type Role } from "@/lib/types"
-
 export default function SignUpPage() {
   const router = useRouter()
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState<Role>("Officer")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -29,7 +26,7 @@ export default function SignUpPage() {
         emailRedirectTo:
           process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
           `${window.location.origin}/auth/callback`,
-        data: { full_name: fullName, role },
+        data: { full_name: fullName },
       },
     })
     if (error) {
@@ -81,19 +78,6 @@ export default function SignUpPage() {
             placeholder="At least 6 characters"
             className={inputClass}
           />
-        </Field>
-        <Field label="Role">
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as Role)}
-            className={inputClass}
-          >
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
         </Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <Button type="submit" className="w-full" disabled={loading}>
