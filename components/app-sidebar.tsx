@@ -5,14 +5,14 @@ import { createClient } from "@/lib/supabase/client"
 import type { Role } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
-    Check,
-    ChevronsUpDown,
-    Columns3,
-    FileText,
-    Gavel,
-    LayoutDashboard,
-    ListTodo,
-    TriangleAlert,
+  Check,
+  ChevronsUpDown,
+  Columns3,
+  FileText,
+  Gavel,
+  LayoutDashboard,
+  ListTodo,
+  TriangleAlert,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -70,7 +70,7 @@ export function AppSidebar({
         />
         <div className="leading-tight">
           <div className="text-sm font-semibold text-sidebar-foreground">
-            ICpEP.SE Ops
+            ICPEP.SE SOP
           </div>
           <div className="text-xs text-muted-foreground">Exec Operations</div>
         </div>
