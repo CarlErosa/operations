@@ -92,17 +92,17 @@ export const DOCUMENT_TYPES: DocumentType[] = [
 
 export type DocumentStage =
   | "Draft"
-  | "Peer Review"
-  | "Formatting"
-  | "Approval"
-  | "Archived"
+  | "Reviewing"
+  | "Reviewed"
+  | "Up for Approval"
+  | "Approved"
 
 export const DOCUMENT_STAGES: DocumentStage[] = [
   "Draft",
-  "Peer Review",
-  "Formatting",
-  "Approval",
-  "Archived",
+  "Reviewing",
+  "Reviewed",
+  "Up for Approval",
+  "Approved",
 ]
 
 export interface DocumentItem {
@@ -114,6 +114,7 @@ export interface DocumentItem {
   reviewedBy?: string
   approvedBy?: string
   versionDate: string
+  failReason?: string
   escalations: Escalation[]
 }
 

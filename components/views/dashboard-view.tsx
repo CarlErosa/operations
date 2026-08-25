@@ -55,7 +55,7 @@ export function DashboardView({
   )
   const pendingApprovals =
     events.filter((e) => e.stage === "Final Approval").length +
-    documents.filter((d) => d.stage === "Approval").length
+    documents.filter((d) => d.stage === "Up for Approval").length
 
   const cards: {
     label: string

@@ -55,8 +55,11 @@ interface StoreValue {
 
   updateTrackerStatus: (id: string, status: TrackerStatus) => void
   advanceEventStage: (id: string) => void
-  approveDocument: (id: string) => void
+  sendForReview: (id: string) => void
   reviewDocument: (id: string) => void
+  passDocument: (id: string) => void
+  failDocument: (id: string, reason: string) => void
+  approveDocument: (id: string) => void
   addDocument: (input: {
     title: string
     type: DocumentType
@@ -119,21 +122,53 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }),
         )
       },
-      approveDocument: (id) => {
+      sendForReview: (id) => {
         setDocuments((prev) =>
           prev.map((d) => {
-            if (d.id !== id) return d
-            log(`approved ${d.title}`, "stage", role)
-            return { ...d, stage: "Archived", approvedBy: "President" }
+            if (d.id !== id || d.stage !== "Draft") return d
+            log(`sent ${d.title} for review`, "stage", role)
+            return { ...d, stage: "Reviewing", failReason: undefined }
           }),
         )
       },
       reviewDocument: (id) => {
         setDocuments((prev) =>
           prev.map((d) => {
-            if (d.id !== id || d.stage !== "Draft") return d
+            if (d.id !== id || d.stage !== "Reviewing") return d
             log(`reviewed ${d.title}`, "stage", role)
-            return { ...d, stage: "Peer Review", reviewedBy: role }
+            return { ...d, stage: "Reviewed", reviewedBy: role }
+          }),
+        )
+      },
+      passDocument: (id) => {
+        setDocuments((prev) =>
+          prev.map((d) => {
+            if (d.id !== id || d.stage !== "Reviewed") return d
+            log(`passed ${d.title} — up for approval`, "stage", role)
+            return { ...d, stage: "Up for Approval" }
+          }),
+        )
+      },
+      failDocument: (id, reason) => {
+        setDocuments((prev) =>
+          prev.map((d) => {
+            if (d.id !== id || d.stage !== "Reviewed") return d
+            log(`failed review for ${d.title}: ${reason}`, "stage", role)
+            return {
+              ...d,
+              stage: "Draft",
+              reviewedBy: undefined,
+              failReason: reason,
+            }
+          }),
+        )
+      },
+      approveDocument: (id) => {
+        setDocuments((prev) =>
+          prev.map((d) => {
+            if (d.id !== id || d.stage !== "Up for Approval") return d
+            log(`approved ${d.title}`, "stage", role)
+            return { ...d, stage: "Approved", approvedBy: "President" }
           }),
         )
       },

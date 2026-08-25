@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Eye, Flag, Plus, X } from "lucide-react"
+import { Check, Eye, Flag, Plus, RotateCcw, Send, ThumbsUp, X } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
@@ -17,11 +17,21 @@ import {
 import { cn } from "@/lib/utils"
 
 export function DocumentsView() {
-  const { documents, role, approveDocument, reviewDocument } = useStore()
+  const {
+    documents,
+    role,
+    sendForReview,
+    reviewDocument,
+    passDocument,
+    failDocument,
+    approveDocument,
+  } = useStore()
   const [formOpen, setFormOpen] = useState(false)
   const [viewId, setViewId] = useState<string | null>(null)
+  const [failId, setFailId] = useState<string | null>(null)
   const viewedDoc = documents.find((d) => d.id === viewId) ?? null
   const canReview = role === "President" || role === "Reviewer"
+  const canApprove = role === "President"
 
   return (
     <div>
@@ -55,10 +65,13 @@ export function DocumentsView() {
                     <DocumentRow
                       key={doc.id}
                       doc={doc}
-                      canApprove={role === "President" && doc.stage === "Approval"}
-                      canReview={canReview && doc.stage === "Draft"}
-                      onApprove={() => approveDocument(doc.id)}
+                      canReview={canReview}
+                      canApprove={canApprove}
+                      onSend={() => sendForReview(doc.id)}
                       onReview={() => reviewDocument(doc.id)}
+                      onPass={() => passDocument(doc.id)}
+                      onFail={() => setFailId(doc.id)}
+                      onApprove={() => approveDocument(doc.id)}
                       onView={() => setViewId(doc.id)}
                     />
                   ))}
@@ -71,16 +84,74 @@ export function DocumentsView() {
 
       {formOpen && <DocumentForm onClose={() => setFormOpen(false)} />}
       {viewedDoc && (
-        <DocumentDetail
-          doc={viewedDoc}
-          canReview={canReview && viewedDoc.stage === "Draft"}
-          onReview={() => {
-            reviewDocument(viewedDoc.id)
-            setViewId(null)
+        <DocumentDetail doc={viewedDoc} onClose={() => setViewId(null)} />
+      )}
+      {failId && (
+        <FailForm
+          onSubmit={(reason) => {
+            failDocument(failId, reason)
+            setFailId(null)
           }}
-          onClose={() => setViewId(null)}
+          onClose={() => setFailId(null)}
         />
       )}
+    </div>
+  )
+}
+
+function FailForm({
+  onSubmit,
+  onClose,
+}: {
+  onSubmit: (reason: string) => void
+  onClose: () => void
+}) {
+  const [reason, setReason] = useState("")
+  const [error, setError] = useState("")
+
+  function submit() {
+    if (!reason.trim()) {
+      setError("A reason is required to return this document.")
+      return
+    }
+    onSubmit(reason.trim())
+  }
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-foreground/20" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-md overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <h2 className="text-sm font-semibold">Return for revision</h2>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+            <X />
+          </Button>
+        </div>
+        <div className="space-y-3 p-5">
+          <Field label="Reason for failing the review">
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={4}
+              placeholder="Explain what needs to change before this can pass review…"
+              className="w-full resize-none rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </Field>
+          <p className="text-xs text-muted-foreground">
+            The document returns to Draft with this note attached.
+          </p>
+          {error && <p className="text-sm text-danger">{error}</p>}
+        </div>
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3.5">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="sm" variant="destructive" onClick={submit}>
+            <RotateCcw />
+            Return to Draft
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -205,17 +276,23 @@ function Field({
 
 function DocumentRow({
   doc,
-  canApprove,
   canReview,
-  onApprove,
+  canApprove,
+  onSend,
   onReview,
+  onPass,
+  onFail,
+  onApprove,
   onView,
 }: {
   doc: DocumentItem
-  canApprove: boolean
   canReview: boolean
-  onApprove: () => void
+  canApprove: boolean
+  onSend: () => void
   onReview: () => void
+  onPass: () => void
+  onFail: () => void
+  onApprove: () => void
   onView: () => void
 }) {
   const unresolved = doc.escalations.filter((e) => !e.resolved).length
@@ -226,9 +303,15 @@ function DocumentRow({
           <span className="truncate text-sm font-medium">{doc.title}</span>
           {unresolved > 0 && <Flag className="size-3.5 shrink-0 text-danger" />}
         </div>
-        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <Badge tone="outline">{doc.type}</Badge>
           <span className="tabular-nums">v. {formatDate(doc.versionDate)}</span>
+          {doc.stage === "Draft" && doc.failReason && (
+            <span className="flex items-center gap-1 text-danger">
+              <RotateCcw className="size-3" />
+              Returned: {doc.failReason}
+            </span>
+          )}
         </div>
       </div>
 
@@ -239,33 +322,91 @@ function DocumentRow({
           <Eye />
           View
         </Button>
-        {canReview ? (
-          <Button size="sm" onClick={onReview}>
-            <Check />
-            Reviewed
-          </Button>
-        ) : canApprove ? (
-          <Button size="sm" onClick={onApprove}>
-            <Check />
-            Approve
-          </Button>
-        ) : doc.stage === "Approval" ? (
-          <span className="text-xs text-muted-foreground">President only</span>
-        ) : null}
+        <StageActions
+          doc={doc}
+          canReview={canReview}
+          canApprove={canApprove}
+          onSend={onSend}
+          onReview={onReview}
+          onPass={onPass}
+          onFail={onFail}
+          onApprove={onApprove}
+        />
       </div>
     </li>
   )
 }
 
-function DocumentDetail({
+function StageActions({
   doc,
   canReview,
+  canApprove,
+  onSend,
   onReview,
-  onClose,
+  onPass,
+  onFail,
+  onApprove,
 }: {
   doc: DocumentItem
   canReview: boolean
+  canApprove: boolean
+  onSend: () => void
   onReview: () => void
+  onPass: () => void
+  onFail: () => void
+  onApprove: () => void
+}) {
+  switch (doc.stage) {
+    case "Draft":
+      return (
+        <Button size="sm" onClick={onSend}>
+          <Send />
+          Send for Review
+        </Button>
+      )
+    case "Reviewing":
+      return canReview ? (
+        <Button size="sm" onClick={onReview}>
+          <Check />
+          Reviewed
+        </Button>
+      ) : (
+        <span className="text-xs text-muted-foreground">Reviewer only</span>
+      )
+    case "Reviewed":
+      return canReview ? (
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="destructive" onClick={onFail}>
+            <RotateCcw />
+            Fail
+          </Button>
+          <Button size="sm" onClick={onPass}>
+            <ThumbsUp />
+            Pass
+          </Button>
+        </div>
+      ) : (
+        <span className="text-xs text-muted-foreground">Reviewer only</span>
+      )
+    case "Up for Approval":
+      return canApprove ? (
+        <Button size="sm" onClick={onApprove}>
+          <Check />
+          Approve
+        </Button>
+      ) : (
+        <span className="text-xs text-muted-foreground">President only</span>
+      )
+    default:
+      return null
+  }
+}
+
+function DocumentDetail({
+  doc,
+  onClose,
+}: {
+  doc: DocumentItem
   onClose: () => void
 }) {
   const unresolved = doc.escalations.filter((e) => !e.resolved)
@@ -299,6 +440,16 @@ function DocumentDetail({
             <SignatoryChain doc={doc} />
           </div>
 
+          {doc.stage === "Draft" && doc.failReason && (
+            <div className="rounded-md border border-danger/30 bg-danger/5 p-3">
+              <h3 className="mb-1 flex items-center gap-1.5 text-xs font-medium text-danger">
+                <RotateCcw className="size-3.5" />
+                Returned for revision
+              </h3>
+              <p className="text-sm text-muted-foreground">{doc.failReason}</p>
+            </div>
+          )}
+
           {unresolved.length > 0 && (
             <div>
               <h3 className="mb-2 flex items-center gap-1.5 text-xs font-medium text-danger">
@@ -320,12 +471,6 @@ function DocumentDetail({
           <Button variant="outline" size="sm" onClick={onClose}>
             Close
           </Button>
-          {canReview && (
-            <Button size="sm" onClick={onReview}>
-              <Check />
-              Mark Reviewed
-            </Button>
-          )}
         </div>
       </div>
     </div>
