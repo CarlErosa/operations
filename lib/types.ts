@@ -76,16 +76,18 @@ export interface EventItem {
 }
 
 export type DocumentType =
-  | "CBL/Bylaws"
-  | "GPOA"
-  | "Announcement"
-  | "Membership Doc"
+  | "Event"
+  | "Meeting"
+  | "External Matters"
+  | "Internal Matters"
+  | "Others"
 
 export const DOCUMENT_TYPES: DocumentType[] = [
-  "CBL/Bylaws",
-  "GPOA",
-  "Announcement",
-  "Membership Doc",
+  "Event",
+  "Meeting",
+  "External Matters",
+  "Internal Matters",
+  "Others",
 ]
 
 export type DocumentStage =

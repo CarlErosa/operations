@@ -123,7 +123,7 @@ export const seedDocuments: DocumentItem[] = [
   {
     id: "d1",
     title: "Constitution & Bylaws Amendment 2026",
-    type: "CBL/Bylaws",
+    type: "Internal Matters",
     stage: "Approval",
     preparedBy: "Miguel Cruz",
     reviewedBy: "Rhea Santos",
@@ -135,7 +135,7 @@ export const seedDocuments: DocumentItem[] = [
   {
     id: "d2",
     title: "General Plan of Action FY2026-2027",
-    type: "GPOA",
+    type: "Internal Matters",
     stage: "Peer Review",
     preparedBy: "Rhea Santos",
     versionDate: "2026-08-22",
@@ -144,7 +144,7 @@ export const seedDocuments: DocumentItem[] = [
   {
     id: "d3",
     title: "New Member Orientation Handbook",
-    type: "Membership Doc",
+    type: "Internal Matters",
     stage: "Formatting",
     preparedBy: "Kim Lorenzo",
     reviewedBy: "Aaron Dela Peña",
@@ -154,7 +154,7 @@ export const seedDocuments: DocumentItem[] = [
   {
     id: "d4",
     title: "TechSummit Registration Announcement",
-    type: "Announcement",
+    type: "Event",
     stage: "Draft",
     preparedBy: "Aaron Dela Peña",
     versionDate: "2026-08-23",
@@ -163,7 +163,7 @@ export const seedDocuments: DocumentItem[] = [
   {
     id: "d5",
     title: "FY2025 Annual Accomplishment Report",
-    type: "Membership Doc",
+    type: "Others",
     stage: "Archived",
     preparedBy: "Miguel Cruz",
     reviewedBy: "Rhea Santos",
