@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   Check,
   ChevronsUpDown,
@@ -42,6 +43,17 @@ export function AppSidebar({
 }) {
   const { role, events, documents, decisions, currentUserName } = useStore()
   const supabase = createClient()
+  const router = useRouter()
+
+  async function handleSignOut() {
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      console.error("[v0] Sign out failed:", error)
+      return
+    }
+    router.replace("/auth/login")
+    router.refresh()
+  }
 
   const unresolved = [...events, ...documents, ...decisions].reduce(
     (acc, item) => acc + item.escalations.filter((e) => !e.resolved).length,
@@ -101,7 +113,8 @@ export function AppSidebar({
             <div className="text-xs text-muted-foreground">{role}</div>
           </div>
           <button
-            onClick={() => supabase.auth.signOut()}
+            type="button"
+            onClick={handleSignOut}
             className="text-xs text-muted-foreground hover:text-sidebar-foreground"
           >
             Sign out
