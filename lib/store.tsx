@@ -56,6 +56,7 @@ interface StoreValue {
   updateTrackerStatus: (id: string, status: TrackerStatus) => void
   advanceEventStage: (id: string) => void
   approveDocument: (id: string) => void
+  reviewDocument: (id: string) => void
   addDocument: (input: {
     title: string
     type: DocumentType
@@ -124,6 +125,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             if (d.id !== id) return d
             log(`approved ${d.title}`, "stage", role)
             return { ...d, stage: "Archived", approvedBy: "President" }
+          }),
+        )
+      },
+      reviewDocument: (id) => {
+        setDocuments((prev) =>
+          prev.map((d) => {
+            if (d.id !== id || d.stage !== "Draft") return d
+            log(`reviewed ${d.title}`, "stage", role)
+            return { ...d, stage: "Peer Review", reviewedBy: role }
           }),
         )
       },

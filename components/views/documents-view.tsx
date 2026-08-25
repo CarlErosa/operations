@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Flag, Plus, X } from "lucide-react"
+import { Check, Eye, Flag, Plus, X } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
@@ -17,8 +17,11 @@ import {
 import { cn } from "@/lib/utils"
 
 export function DocumentsView() {
-  const { documents, role, approveDocument } = useStore()
+  const { documents, role, approveDocument, reviewDocument } = useStore()
   const [formOpen, setFormOpen] = useState(false)
+  const [viewId, setViewId] = useState<string | null>(null)
+  const viewedDoc = documents.find((d) => d.id === viewId) ?? null
+  const canReview = role === "President" || role === "Reviewer"
 
   return (
     <div>
@@ -53,7 +56,10 @@ export function DocumentsView() {
                       key={doc.id}
                       doc={doc}
                       canApprove={role === "President" && doc.stage === "Approval"}
+                      canReview={canReview && doc.stage === "Draft"}
                       onApprove={() => approveDocument(doc.id)}
+                      onReview={() => reviewDocument(doc.id)}
+                      onView={() => setViewId(doc.id)}
                     />
                   ))}
                 </ul>
@@ -64,6 +70,17 @@ export function DocumentsView() {
       </div>
 
       {formOpen && <DocumentForm onClose={() => setFormOpen(false)} />}
+      {viewedDoc && (
+        <DocumentDetail
+          doc={viewedDoc}
+          canReview={canReview && viewedDoc.stage === "Draft"}
+          onReview={() => {
+            reviewDocument(viewedDoc.id)
+            setViewId(null)
+          }}
+          onClose={() => setViewId(null)}
+        />
+      )}
     </div>
   )
 }
@@ -189,11 +206,17 @@ function Field({
 function DocumentRow({
   doc,
   canApprove,
+  canReview,
   onApprove,
+  onReview,
+  onView,
 }: {
   doc: DocumentItem
   canApprove: boolean
+  canReview: boolean
   onApprove: () => void
+  onReview: () => void
+  onView: () => void
 }) {
   const unresolved = doc.escalations.filter((e) => !e.resolved).length
   return (
@@ -211,8 +234,17 @@ function DocumentRow({
 
       <SignatoryChain doc={doc} />
 
-      <div className="md:w-28 md:text-right">
-        {canApprove ? (
+      <div className="flex items-center gap-2 md:justify-end">
+        <Button variant="outline" size="sm" onClick={onView}>
+          <Eye />
+          View
+        </Button>
+        {canReview ? (
+          <Button size="sm" onClick={onReview}>
+            <Check />
+            Reviewed
+          </Button>
+        ) : canApprove ? (
           <Button size="sm" onClick={onApprove}>
             <Check />
             Approve
@@ -222,6 +254,90 @@ function DocumentRow({
         ) : null}
       </div>
     </li>
+  )
+}
+
+function DocumentDetail({
+  doc,
+  canReview,
+  onReview,
+  onClose,
+}: {
+  doc: DocumentItem
+  canReview: boolean
+  onReview: () => void
+  onClose: () => void
+}) {
+  const unresolved = doc.escalations.filter((e) => !e.resolved)
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-foreground/20" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-3.5">
+          <div className="min-w-0">
+            <h2 className="truncate text-sm font-semibold">{doc.title}</h2>
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <Badge tone="outline">{doc.type}</Badge>
+              <Badge tone="neutral">{doc.stage}</Badge>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+            <X />
+          </Button>
+        </div>
+
+        <div className="max-h-[70vh] space-y-5 overflow-y-auto p-5">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <Detail label="Prepared by" value={doc.preparedBy} />
+            <Detail label="Version date" value={formatDate(doc.versionDate)} />
+            <Detail label="Reviewed by" value={doc.reviewedBy ?? "Pending"} />
+            <Detail label="Approved by" value={doc.approvedBy ?? "Pending"} />
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-xs font-medium text-foreground">Signatory chain</h3>
+            <SignatoryChain doc={doc} />
+          </div>
+
+          {unresolved.length > 0 && (
+            <div>
+              <h3 className="mb-2 flex items-center gap-1.5 text-xs font-medium text-danger">
+                <Flag className="size-3.5" />
+                Open escalations
+              </h3>
+              <ul className="space-y-1">
+                {unresolved.map((e) => (
+                  <li key={e.id} className="text-sm text-muted-foreground">
+                    {e.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3.5">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Close
+          </Button>
+          {canReview && (
+            <Button size="sm" onClick={onReview}>
+              <Check />
+              Mark Reviewed
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-0.5 font-medium">{value}</div>
+    </div>
   )
 }
 
