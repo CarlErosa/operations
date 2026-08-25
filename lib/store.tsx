@@ -81,6 +81,14 @@ interface StoreValue {
   activity: ActivityEntry[]
 
   updateTrackerStatus: (id: string, status: TrackerStatus) => void
+  addTrackerItem: (input: {
+    deliverable: string
+    owner: string
+    reviewer: string
+    targetDate: string
+    status: TrackerStatus
+    blockers?: string
+  }) => void
   advanceEventStage: (id: string) => void
   setEventStage: (id: string, stage: EventStage) => void
   sendForReview: (id: string) => void
@@ -157,6 +165,19 @@ export function StoreProvider({
         await supabase.from("tracker_items").update({ status }).eq("id", id)
         if (item)
           await log(`set "${item.deliverable}" to ${status}`, "status", currentUserName)
+        refresh()
+      },
+
+      addTrackerItem: async ({ deliverable, owner, reviewer, targetDate, status, blockers }) => {
+        await supabase.from("tracker_items").insert({
+          deliverable,
+          owner,
+          reviewer,
+          target_date: targetDate,
+          status,
+          blockers: blockers || null,
+        })
+        await log(`added deliverable "${deliverable}"`, "status", currentUserName)
         refresh()
       },
 

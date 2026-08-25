@@ -58,7 +58,7 @@ export const EVENT_STAGES: EventStage[] = [
 // Stage-specific lead time in weeks before the target date.
 export const STAGE_LEAD_WEEKS: Record<EventStage, number> = {
   Concept: 10,
-  "Logistics/GPOA": 8,
+  Logistics: 8,
   "Marketing Plan": 6,
   "Internal Review": 4,
   "Final Approval": 3,

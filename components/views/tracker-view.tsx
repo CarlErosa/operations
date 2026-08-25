@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Check, ChevronDown } from "lucide-react"
+import { Check, ChevronDown, Plus, X } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { formatDate, relativeLabel, urgencyOf } from "@/lib/dates"
 import { statusTone } from "@/lib/ui-maps"
 import { TRACKER_STATUSES, type TrackerStatus } from "@/lib/types"
@@ -14,6 +15,7 @@ export function TrackerView() {
   const { tracker, updateTrackerStatus } = useStore()
   const [ownerFilter, setOwnerFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState<TrackerStatus | "all">("all")
+  const [formOpen, setFormOpen] = useState(false)
 
   const owners = useMemo(
     () => Array.from(new Set(tracker.map((t) => t.owner))).sort(),
@@ -31,6 +33,12 @@ export function TrackerView() {
       <PageHeader
         title="Tracker"
         description="All executive deliverables and their current status."
+        actions={
+          <Button size="sm" onClick={() => setFormOpen(true)}>
+            <Plus />
+            Add Item
+          </Button>
+        }
       />
       <div className="p-6">
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -115,6 +123,7 @@ export function TrackerView() {
           </table>
         </div>
       </div>
+      {formOpen && <TrackerItemForm onClose={() => setFormOpen(false)} />}
     </div>
   )
 }
@@ -200,6 +209,151 @@ function StatusEditor({
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function TrackerItemForm({ onClose }: { onClose: () => void }) {
+  const { addTrackerItem } = useStore()
+  const [deliverable, setDeliverable] = useState("")
+  const [owner, setOwner] = useState("")
+  const [reviewer, setReviewer] = useState("")
+  const [targetDate, setTargetDate] = useState("")
+  const [status, setStatus] = useState<TrackerStatus>("Not Started")
+  const [blockers, setBlockers] = useState("")
+  const [error, setError] = useState("")
+
+  function submit() {
+    if (!deliverable.trim()) {
+      setError("A deliverable name is required.")
+      return
+    }
+    if (!owner.trim()) {
+      setError("An owner is required.")
+      return
+    }
+    if (!reviewer.trim()) {
+      setError("A reviewer is required.")
+      return
+    }
+    if (!targetDate) {
+      setError("A target date is required.")
+      return
+    }
+    addTrackerItem({
+      deliverable: deliverable.trim(),
+      owner: owner.trim(),
+      reviewer: reviewer.trim(),
+      targetDate,
+      status,
+      blockers: blockers.trim() || undefined,
+    })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-foreground/20" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <h2 className="text-sm font-semibold">Add a deliverable</h2>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+            <X />
+          </Button>
+        </div>
+
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-5">
+          <Field label="Deliverable">
+            <input
+              value={deliverable}
+              onChange={(e) => setDeliverable(e.target.value)}
+              placeholder="e.g. Sponsorship deck"
+              className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Owner">
+              <input
+                value={owner}
+                onChange={(e) => setOwner(e.target.value)}
+                placeholder="Officer name"
+                className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+            </Field>
+            <Field label="Reviewer">
+              <input
+                value={reviewer}
+                onChange={(e) => setReviewer(e.target.value)}
+                placeholder="Officer name"
+                className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Target date">
+              <input
+                type="date"
+                value={targetDate}
+                onChange={(e) => setTargetDate(e.target.value)}
+                className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+            </Field>
+            <Field label="Status">
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as TrackerStatus)}
+                className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {TRACKER_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <Field label="Blockers (optional)">
+            <textarea
+              value={blockers}
+              onChange={(e) => setBlockers(e.target.value)}
+              rows={2}
+              placeholder="Any blockers or dependencies…"
+              className="w-full resize-none rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </Field>
+
+          {error && <p className="text-sm text-danger">{error}</p>}
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3.5">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={submit}>
+            Add item
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium text-foreground">
+        {label}
+      </label>
+      {children}
     </div>
   )
 }
