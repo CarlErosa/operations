@@ -109,6 +109,14 @@ interface StoreValue {
     targetDate: string
     notes: string
   }) => void
+  updateEvent: (id: string, input: {
+    name: string
+    department: Department
+    owner: string
+    targetDate: string
+    notes: string
+  }) => void
+  deleteEvent: (id: string) => void
   addDecision: (input: {
     description: string
     tier: DecisionTier
@@ -296,6 +304,25 @@ export function StoreProvider({
           notes,
         })
         await log(`added event "${name}" to Concept`, "stage", currentUserName)
+        refresh()
+      },
+
+      updateEvent: async (id, { name, department, owner, targetDate, notes }) => {
+        await supabase.from("events").update({
+          name,
+          department,
+          owner,
+          target_date: targetDate,
+          notes,
+        }).eq("id", id)
+        await log(`updated event "${name}"`, "stage", currentUserName)
+        refresh()
+      },
+
+      deleteEvent: async (id) => {
+        const e = events.find((x) => x.id === id)
+        await supabase.from("events").delete().eq("id", id)
+        if (e) await log(`deleted event "${e.name}"`, "stage", currentUserName)
         refresh()
       },
 

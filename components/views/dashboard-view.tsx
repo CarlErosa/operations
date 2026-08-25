@@ -65,32 +65,32 @@ export function DashboardView({
     to: ViewKey
   }[] = [
     {
-      label: "Due this week",
-      value: dueThisWeek,
+      label: "Tracker items",
+      value: tracker.length,
       icon: CalendarClock,
       tone: "text-info",
       to: "tracker",
     },
     {
-      label: "Blocked items",
-      value: blocked,
-      icon: CircleSlash,
-      tone: "text-danger",
-      to: "tracker",
-    },
-    {
-      label: "Unresolved flags",
-      value: unresolvedFlags,
-      icon: TriangleAlert,
-      tone: "text-warning-foreground",
-      to: "escalations",
-    },
-    {
-      label: "Pending approvals",
-      value: pendingApprovals,
-      icon: FileClock,
+      label: "Events",
+      value: events.length,
+      icon: GitBranch,
       tone: "text-brand",
+      to: "events",
+    },
+    {
+      label: "Documents",
+      value: documents.length,
+      icon: FileClock,
+      tone: "text-warning-foreground",
       to: "documents",
+    },
+    {
+      label: "Decisions",
+      value: decisions.length,
+      icon: Gavel,
+      tone: "text-success",
+      to: "decisions",
     },
   ]
 

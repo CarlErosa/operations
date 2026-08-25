@@ -1,16 +1,14 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { ArrowRight, Clock, Flag, Plus, X } from "lucide-react"
+import { ArrowRight, Clock, Flag, MoreVertical, Pencil, Plus, Trash2, X } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
+  daysUntil,
   formatDate,
-  formatShort,
-  leadTimeDeadline,
-  relativeLabel,
   urgencyOf,
 } from "@/lib/dates"
 import { departmentColor, urgencyTone } from "@/lib/ui-maps"
@@ -18,11 +16,14 @@ import { DEPARTMENTS, EVENT_STAGES, type Department, type EventItem, type EventS
 import { cn } from "@/lib/utils"
 
 export function EventsView() {
-  const { events, setEventStage } = useStore()
+  const { events, setEventStage, deleteEvent } = useStore()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [dragOverStage, setDragOverStage] = useState<EventStage | null>(null)
   const selected = events.find((e) => e.id === selectedId) ?? null
+  const editing = events.find((e) => e.id === editingId) ?? null
 
   const onDragOver = useCallback((e: React.DragEvent, stage: EventStage) => {
     e.preventDefault()
@@ -45,7 +46,7 @@ export function EventsView() {
     <div>
       <PageHeader
         title="Events"
-        description="Event pipeline across the 7 SOP stages. Cards warn when the lead-time deadline is near."
+        description="Event pipeline across the 7 SOP stages. Drag cards between columns to update status."
         actions={
           <Button size="sm" onClick={() => setFormOpen(true)}>
             <Plus />
@@ -84,6 +85,8 @@ export function EventsView() {
                       key={e.id}
                       event={e}
                       onClick={() => setSelectedId(e.id)}
+                      onEdit={() => setEditingId(e.id)}
+                      onDelete={() => setDeletingId(e.id)}
                     />
                   ))}
                 </div>
@@ -97,17 +100,29 @@ export function EventsView() {
         <EventDetail event={selected} onClose={() => setSelectedId(null)} />
       )}
       {formOpen && <EventForm onClose={() => setFormOpen(false)} />}
+      {editing && (
+        <EventForm
+          event={editing}
+          onClose={() => setEditingId(null)}
+        />
+      )}
+      {deletingId && (
+        <DeleteConfirm
+          onConfirm={() => { deleteEvent(deletingId); setDeletingId(null) }}
+          onCancel={() => setDeletingId(null)}
+        />
+      )}
     </div>
   )
 }
 
-function EventForm({ onClose }: { onClose: () => void }) {
-  const { addEvent } = useStore()
-  const [name, setName] = useState("")
-  const [department, setDepartment] = useState<Department>("Operations")
-  const [owner, setOwner] = useState("")
-  const [targetDate, setTargetDate] = useState("")
-  const [notes, setNotes] = useState("")
+function EventForm({ event, onClose }: { event?: EventItem; onClose: () => void }) {
+  const { addEvent, updateEvent } = useStore()
+  const [name, setName] = useState(event?.name ?? "")
+  const [department, setDepartment] = useState<Department>(event?.department ?? "Operations")
+  const [owner, setOwner] = useState(event?.owner ?? "")
+  const [targetDate, setTargetDate] = useState(event?.targetDate ?? "")
+  const [notes, setNotes] = useState(event?.notes ?? "")
   const [error, setError] = useState("")
 
   function submit() {
@@ -123,13 +138,18 @@ function EventForm({ onClose }: { onClose: () => void }) {
       setError("A target date is required.")
       return
     }
-    addEvent({
+    const input = {
       name: name.trim(),
       department,
       owner: owner.trim(),
       targetDate,
       notes: notes.trim(),
-    })
+    }
+    if (event) {
+      updateEvent(event.id, input)
+    } else {
+      addEvent(input)
+    }
     onClose()
   }
 
@@ -138,7 +158,7 @@ function EventForm({ onClose }: { onClose: () => void }) {
       <div className="absolute inset-0 bg-foreground/20" onClick={onClose} aria-hidden />
       <div className="relative w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
-          <h2 className="text-sm font-semibold">Add an event</h2>
+          <h2 className="text-sm font-semibold">{event ? "Edit event" : "Add an event"}</h2>
           <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
             <X />
           </Button>
@@ -197,9 +217,11 @@ function EventForm({ onClose }: { onClose: () => void }) {
             />
           </Field>
 
-          <p className="text-xs text-muted-foreground">
-            New events start in the <span className="font-medium">Concept</span> stage.
-          </p>
+          {!event && (
+            <p className="text-xs text-muted-foreground">
+              New events start in the <span className="font-medium">Concept</span> stage.
+            </p>
+          )}
 
           {error && <p className="text-sm text-danger">{error}</p>}
         </div>
@@ -209,7 +231,7 @@ function EventForm({ onClose }: { onClose: () => void }) {
             Cancel
           </Button>
           <Button size="sm" onClick={submit}>
-            Add event
+            {event ? "Save changes" : "Add event"}
           </Button>
         </div>
       </div>
@@ -220,28 +242,63 @@ function EventForm({ onClose }: { onClose: () => void }) {
 function EventCard({
   event,
   onClick,
+  onEdit,
+  onDelete,
 }: {
   event: EventItem
   onClick: () => void
+  onEdit: () => void
+  onDelete: () => void
 }) {
-  const deadline = leadTimeDeadline(event.targetDate, event.stage)
-  const urgency = urgencyOf(deadline)
+  const urgency = urgencyOf(event.targetDate)
   const unresolved = event.escalations.filter((e) => !e.resolved).length
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <button
+    <div
       draggable
       onDragStart={(e) => e.dataTransfer.setData("text/plain", event.id)}
       onClick={onClick}
-      className="flex flex-col gap-2 rounded-md border border-border bg-card p-2.5 text-left shadow-sm transition-colors hover:border-ring cursor-grab active:cursor-grabbing"
+      className="group relative flex flex-col gap-2 rounded-md border border-border bg-card p-2.5 text-left shadow-sm transition-colors hover:border-ring cursor-grab active:cursor-grabbing"
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-medium leading-snug text-pretty">
           {event.name}
         </span>
-        {unresolved > 0 && (
-          <Flag className="mt-0.5 size-3.5 shrink-0 text-danger" />
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {unresolved > 0 && (
+            <Flag className="mt-0.5 size-3.5 text-danger" />
+          )}
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o) }}
+              className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+            >
+              <MoreVertical className="size-3.5" />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-full z-20 mt-1 w-32 overflow-hidden rounded-md border border-border bg-popover shadow-md">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit() }}
+                    className="flex w-full items-center gap-2 px-2.5 py-1.5 text-sm hover:bg-accent"
+                  >
+                    <Pencil className="size-3.5" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete() }}
+                    className="flex w-full items-center gap-2 px-2.5 py-1.5 text-sm text-danger hover:bg-accent"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <span
@@ -261,10 +318,13 @@ function EventCard({
         />
         <span className="text-muted-foreground">Lead-time</span>
         <Badge tone={urgencyTone[urgency]} className="ml-auto">
-          {urgency === "ok" ? formatShort(deadline) : relativeLabel(deadline)}
+          {(() => {
+            const d = daysUntil(event.targetDate)
+            return d < 0 ? `${Math.abs(d)}d overdue` : `in ${d}d`
+          })()}
         </Badge>
       </div>
-    </button>
+    </div>
   )
 }
 
@@ -278,8 +338,6 @@ function EventDetail({
   const { advanceEventStage } = useStore()
   const stageIdx = EVENT_STAGES.indexOf(event.stage)
   const nextStage = EVENT_STAGES[stageIdx + 1]
-  const deadline = leadTimeDeadline(event.targetDate, event.stage)
-  const urgency = urgencyOf(deadline)
   const flaggedForPresident = event.stage === "Final Approval"
 
   return (
@@ -332,14 +390,6 @@ function EventDetail({
               <dt className="text-xs text-muted-foreground">Target date</dt>
               <dd className="mt-0.5 font-medium tabular-nums">
                 {formatDate(event.targetDate)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Lead-time deadline</dt>
-              <dd className="mt-0.5">
-                <Badge tone={urgencyTone[urgency]}>
-                  {formatDate(deadline)}
-                </Badge>
               </dd>
             </div>
           </dl>
@@ -413,6 +463,37 @@ function Field({
         {label}
       </label>
       {children}
+    </div>
+  )
+}
+
+function DeleteConfirm({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-foreground/20" onClick={onCancel} aria-hidden />
+      <div className="relative w-full max-w-sm overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+        <div className="p-5">
+          <h2 className="text-sm font-semibold">Delete event</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Are you sure you want to delete this event? This action cannot be undone.
+          </p>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3.5">
+          <Button variant="outline" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button size="sm" variant="destructive" onClick={onConfirm}>
+            <Trash2 />
+            Delete
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

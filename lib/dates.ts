@@ -1,5 +1,3 @@
-import { STAGE_LEAD_WEEKS, type EventStage } from "./types"
-
 // Fixed "today" so seed data reads consistently in the demo.
 export const TODAY = new Date("2026-08-25T00:00:00")
 
@@ -37,23 +35,6 @@ export function isThisWeek(iso: string): boolean {
 
 export function isOverdue(iso: string): boolean {
   return daysUntil(iso) < 0
-}
-
-// Lead-time deadline = targetDate minus stage-specific weeks.
-export function leadTimeDeadline(targetDate: string, stage: EventStage): string {
-  const weeks = STAGE_LEAD_WEEKS[stage]
-  if (!targetDate) return TODAY.toISOString().slice(0, 10)
-
-  let d = parseDate(targetDate)
-  if (isNaN(d.getTime())) {
-    // try a fallback parse (accept full ISO or other formats)
-    const alt = new Date(targetDate)
-    if (!isNaN(alt.getTime())) d = alt
-    else return TODAY.toISOString().slice(0, 10)
-  }
-
-  d.setDate(d.getDate() - weeks * 7)
-  return d.toISOString().slice(0, 10)
 }
 
 export type Urgency = "overdue" | "warning" | "ok"
