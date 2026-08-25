@@ -1,21 +1,21 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
-import {
-  Check,
-  ChevronsUpDown,
-  FileText,
-  Gavel,
-  LayoutDashboard,
-  ListTodo,
-  Columns3,
-  TriangleAlert,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
 import { useStore } from "@/lib/store"
 import { createClient } from "@/lib/supabase/client"
 import type { Role } from "@/lib/types"
+import { cn } from "@/lib/utils"
+import {
+    Check,
+    ChevronsUpDown,
+    Columns3,
+    FileText,
+    Gavel,
+    LayoutDashboard,
+    ListTodo,
+    TriangleAlert,
+} from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
 
 export type ViewKey =
   | "dashboard"
@@ -63,9 +63,11 @@ export function AppSidebar({
   return (
     <aside className="flex h-dvh w-60 shrink-0 flex-col border-r border-border bg-sidebar">
       <div className="flex items-center gap-2.5 px-4 py-4">
-        <div className="flex size-8 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
-          IC
-        </div>
+        <img
+          src="/icpep_logo.jpg"
+          alt="ICpEP logo"
+          className="h-8 w-8 rounded-md object-cover"
+        />
         <div className="leading-tight">
           <div className="text-sm font-semibold text-sidebar-foreground">
             ICpEP.SE Ops

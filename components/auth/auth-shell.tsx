@@ -33,8 +33,12 @@ export function AuthShell({
     <main className="flex min-h-svh items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-md bg-brand text-sm font-bold text-brand-foreground">
-            SE
+          <div className="mx-auto mb-3">
+            <img
+              src="/icpep_logo.jpg"
+              alt="ICpEP logo"
+              className="mx-auto h-10 w-10 rounded-md object-cover"
+            />
           </div>
           <h1 className="text-lg font-semibold text-foreground text-balance">{title}</h1>
           <p className="mt-1 text-sm text-muted-foreground text-pretty">{subtitle}</p>
