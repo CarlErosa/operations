@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/lib/store"
+import { createClient } from "@/lib/supabase/client"
 import type { Role } from "@/lib/types"
 
 export type ViewKey =
@@ -32,8 +33,6 @@ const NAV: { key: ViewKey; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "escalations", label: "Escalations", icon: TriangleAlert },
 ]
 
-const ROLES: Role[] = ["President", "Officer", "Reviewer"]
-
 export function AppSidebar({
   active,
   onNavigate,
@@ -41,7 +40,8 @@ export function AppSidebar({
   active: ViewKey
   onNavigate: (v: ViewKey) => void
 }) {
-  const { role, setRole, events, documents, decisions } = useStore()
+  const { role, events, documents, decisions, currentUserName } = useStore()
+  const supabase = createClient()
 
   const unresolved = [...events, ...documents, ...decisions].reduce(
     (acc, item) => acc + item.escalations.filter((e) => !e.resolved).length,
@@ -89,7 +89,25 @@ export function AppSidebar({
         })}
       </nav>
 
-      <RoleSwitcher role={role} onChange={setRole} roles={ROLES} />
+      <div className="border-t border-border p-2">
+        <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5">
+          <div className="flex size-8 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
+            {(currentUserName || role).slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="truncate text-xs font-medium text-sidebar-foreground">
+              {currentUserName || "Signed-in user"}
+            </div>
+            <div className="text-xs text-muted-foreground">{role}</div>
+          </div>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="text-xs text-muted-foreground hover:text-sidebar-foreground"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
     </aside>
   )
 }

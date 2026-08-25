@@ -2,19 +2,21 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useMemo,
-  useState,
   type ReactNode,
 } from "react"
+import useSWR from "swr"
+import { createClient } from "@/lib/supabase/client"
 import {
-  seedActivity,
-  seedDecisions,
-  seedDocuments,
-  seedEvents,
-  seedTracker,
-} from "./seed-data"
-import { TODAY } from "./dates"
+  mapActivity,
+  mapDecision,
+  mapDocument,
+  mapEvent,
+  mapTracker,
+  type EscalationRow,
+} from "./mappers"
 import type {
   ActivityEntry,
   Decision,
@@ -24,28 +26,51 @@ import type {
   DocumentType,
   EscalationReason,
   EventItem,
-  EventStage,
   Role,
   TrackerItem,
   TrackerStatus,
 } from "./types"
 import { EVENT_STAGES } from "./types"
 
-function uid(prefix: string) {
-  return `${prefix}-${Math.random().toString(36).slice(2, 9)}`
+const supabase = createClient()
+
+function today() {
+  return new Date().toISOString().slice(0, 10)
 }
 
-function nowStamp() {
-  // Anchor new activity to the demo "today" with current wall-clock time-of-day.
-  const d = new Date(TODAY)
-  const real = new Date()
-  d.setHours(real.getHours(), real.getMinutes(), 0, 0)
-  return d.toISOString()
+interface BoardData {
+  tracker: TrackerItem[]
+  events: EventItem[]
+  documents: DocumentItem[]
+  decisions: Decision[]
+  activity: ActivityEntry[]
+}
+
+async function fetchBoard(): Promise<BoardData> {
+  const [tracker, events, documents, decisions, activity, escalations] =
+    await Promise.all([
+      supabase.from("tracker_items").select("*").order("target_date"),
+      supabase.from("events").select("*").order("created_at"),
+      supabase.from("documents").select("*").order("created_at", { ascending: false }),
+      supabase.from("decisions").select("*").order("created_at", { ascending: false }),
+      supabase.from("activity").select("*").order("created_at", { ascending: false }).limit(50),
+      supabase.from("escalations").select("*"),
+    ])
+
+  const esc = (escalations.data ?? []) as EscalationRow[]
+  return {
+    tracker: (tracker.data ?? []).map(mapTracker),
+    events: (events.data ?? []).map((r) => mapEvent(r, esc)),
+    documents: (documents.data ?? []).map((r) => mapDocument(r, esc)),
+    decisions: (decisions.data ?? []).map((r) => mapDecision(r, esc)),
+    activity: (activity.data ?? []).map(mapActivity),
+  }
 }
 
 interface StoreValue {
   role: Role
-  setRole: (r: Role) => void
+  currentUserName: string
+  loading: boolean
 
   tracker: TrackerItem[]
   events: EventItem[]
@@ -78,161 +103,187 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null)
 
-export function StoreProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<Role>("President")
-  const [tracker, setTracker] = useState<TrackerItem[]>(seedTracker)
-  const [events, setEvents] = useState<EventItem[]>(seedEvents)
-  const [documents, setDocuments] = useState<DocumentItem[]>(seedDocuments)
-  const [decisions, setDecisions] = useState<Decision[]>(seedDecisions)
-  const [activity, setActivity] = useState<ActivityEntry[]>(seedActivity)
+export function StoreProvider({
+  role,
+  currentUserName,
+  children,
+}: {
+  role: Role
+  currentUserName: string
+  children: ReactNode
+}) {
+  const { data, isLoading, mutate } = useSWR("board", fetchBoard, {
+    revalidateOnFocus: false,
+  })
 
-  function log(message: string, kind: ActivityEntry["kind"], actor: string) {
-    setActivity((prev) => [
-      { id: uid("a"), timestamp: nowStamp(), actor, message, kind },
-      ...prev,
-    ])
-  }
+  const tracker = data?.tracker ?? []
+  const events = data?.events ?? []
+  const documents = data?.documents ?? []
+  const decisions = data?.decisions ?? []
+  const activity = data?.activity ?? []
+
+  const log = useCallback(
+    async (message: string, kind: ActivityEntry["kind"], actor: string) => {
+      await supabase.from("activity").insert({ actor, message, kind })
+    },
+    [],
+  )
+
+  const refresh = useCallback(() => mutate(), [mutate])
 
   const value = useMemo<StoreValue>(() => {
     return {
       role,
-      setRole,
+      currentUserName,
+      loading: isLoading,
       tracker,
       events,
       documents,
       decisions,
       activity,
-      updateTrackerStatus: (id, status) => {
-        setTracker((prev) =>
-          prev.map((t) => (t.id === id ? { ...t, status } : t)),
-        )
+
+      updateTrackerStatus: async (id, status) => {
         const item = tracker.find((t) => t.id === id)
+        await supabase.from("tracker_items").update({ status }).eq("id", id)
         if (item)
-          log(`set "${item.deliverable}" to ${status}`, "status", role)
+          await log(`set "${item.deliverable}" to ${status}`, "status", currentUserName)
+        refresh()
       },
-      advanceEventStage: (id) => {
-        setEvents((prev) =>
-          prev.map((e) => {
-            if (e.id !== id) return e
-            const idx = EVENT_STAGES.indexOf(e.stage)
-            const next = EVENT_STAGES[Math.min(idx + 1, EVENT_STAGES.length - 1)]
-            if (next !== e.stage)
-              log(`moved ${e.name} to ${next}`, "stage", role)
-            return { ...e, stage: next as EventStage }
-          }),
-        )
+
+      advanceEventStage: async (id) => {
+        const e = events.find((x) => x.id === id)
+        if (!e) return
+        const idx = EVENT_STAGES.indexOf(e.stage)
+        const next = EVENT_STAGES[Math.min(idx + 1, EVENT_STAGES.length - 1)]
+        if (next === e.stage) return
+        await supabase.from("events").update({ stage: next }).eq("id", id)
+        await log(`moved ${e.name} to ${next}`, "stage", currentUserName)
+        refresh()
       },
-      sendForReview: (id) => {
-        setDocuments((prev) =>
-          prev.map((d) => {
-            if (d.id !== id || d.stage !== "Draft") return d
-            log(`sent ${d.title} for review`, "stage", role)
-            return { ...d, stage: "Reviewing", failReason: undefined }
-          }),
-        )
+
+      sendForReview: async (id) => {
+        const d = documents.find((x) => x.id === id)
+        if (!d || d.stage !== "Draft") return
+        await supabase
+          .from("documents")
+          .update({ stage: "Reviewing", fail_reason: null })
+          .eq("id", id)
+        await log(`sent ${d.title} for review`, "stage", currentUserName)
+        refresh()
       },
-      reviewDocument: (id, signedFileName) => {
-        setDocuments((prev) =>
-          prev.map((d) => {
-            if (d.id !== id || d.stage !== "Reviewing") return d
-            log(`reviewed & e-signed ${d.title}`, "stage", role)
-            return {
-              ...d,
-              stage: "Reviewed",
-              reviewedBy: role,
-              reviewedFileName: signedFileName,
-            }
-          }),
-        )
+
+      reviewDocument: async (id, signedFileName) => {
+        const d = documents.find((x) => x.id === id)
+        if (!d || d.stage !== "Reviewing") return
+        await supabase
+          .from("documents")
+          .update({
+            stage: "Reviewed",
+            reviewed_by: currentUserName,
+            reviewed_file_name: signedFileName,
+          })
+          .eq("id", id)
+        await log(`reviewed & e-signed ${d.title}`, "stage", currentUserName)
+        refresh()
       },
-      passDocument: (id) => {
-        setDocuments((prev) =>
-          prev.map((d) => {
-            if (d.id !== id || d.stage !== "Reviewed") return d
-            log(`passed ${d.title} — up for approval`, "stage", role)
-            return { ...d, stage: "Up for Approval" }
-          }),
-        )
+
+      passDocument: async (id) => {
+        const d = documents.find((x) => x.id === id)
+        if (!d || d.stage !== "Reviewed") return
+        await supabase
+          .from("documents")
+          .update({ stage: "Up for Approval" })
+          .eq("id", id)
+        await log(`passed ${d.title} — up for approval`, "stage", currentUserName)
+        refresh()
       },
-      failDocument: (id, reason) => {
-        setDocuments((prev) =>
-          prev.map((d) => {
-            if (d.id !== id || d.stage !== "Reviewed") return d
-            log(`failed review for ${d.title}: ${reason}`, "stage", role)
-            return {
-              ...d,
-              stage: "Draft",
-              reviewedBy: undefined,
-              reviewedFileName: undefined,
-              failReason: reason,
-            }
-          }),
-        )
+
+      failDocument: async (id, reason) => {
+        const d = documents.find((x) => x.id === id)
+        if (!d || d.stage !== "Reviewed") return
+        await supabase
+          .from("documents")
+          .update({
+            stage: "Draft",
+            reviewed_by: null,
+            reviewed_file_name: null,
+            fail_reason: reason,
+          })
+          .eq("id", id)
+        await log(`failed review for ${d.title}: ${reason}`, "stage", currentUserName)
+        refresh()
       },
-      approveDocument: (id, signedFileName) => {
-        setDocuments((prev) =>
-          prev.map((d) => {
-            if (d.id !== id || d.stage !== "Up for Approval") return d
-            log(`approved & e-signed ${d.title}`, "stage", role)
-            return {
-              ...d,
-              stage: "Approved",
-              approvedBy: "President",
-              signedFileName,
-            }
-          }),
-        )
+
+      approveDocument: async (id, signedFileName) => {
+        const d = documents.find((x) => x.id === id)
+        if (!d || d.stage !== "Up for Approval") return
+        await supabase
+          .from("documents")
+          .update({
+            stage: "Approved",
+            approved_by: currentUserName,
+            signed_file_name: signedFileName,
+          })
+          .eq("id", id)
+        await log(`approved & e-signed ${d.title}`, "stage", currentUserName)
+        refresh()
       },
-      addDocument: ({ title, type, stage, preparedBy }) => {
-        const newDoc: DocumentItem = {
-          id: uid("doc"),
+
+      addDocument: async ({ title, type, stage, preparedBy }) => {
+        await supabase.from("documents").insert({
           title,
           type,
           stage,
-          preparedBy,
-          versionDate: TODAY.toISOString().slice(0, 10),
-          escalations: [],
-        }
-        setDocuments((prev) => [newDoc, ...prev])
-        log(`added document "${title}" (${stage})`, "stage", role)
+          prepared_by: preparedBy,
+          version_date: today(),
+        })
+        await log(`added document "${title}" (${stage})`, "stage", currentUserName)
+        refresh()
       },
-      addDecision: ({ description, tier, decidedBy, reason, escalationReasons }) => {
-        const newDecision: Decision = {
-          id: uid("dec"),
-          description,
-          tier,
-          decidedBy,
-          date: TODAY.toISOString().slice(0, 10),
-          reason,
-          escalations: escalationReasons.map((r) => ({
-            id: uid("esc"),
-            reason: r,
-            resolved: false,
-          })),
+
+      addDecision: async ({ description, tier, decidedBy, reason, escalationReasons }) => {
+        const { data: inserted } = await supabase
+          .from("decisions")
+          .insert({ description, tier, decided_by: decidedBy, reason, date: today() })
+          .select("id")
+          .single()
+
+        if (inserted && escalationReasons.length > 0) {
+          await supabase.from("escalations").insert(
+            escalationReasons.map((r) => ({
+              reason: r,
+              decision_id: inserted.id,
+            })),
+          )
         }
-        setDecisions((prev) => [newDecision, ...prev])
-        log(`logged a Tier ${tier} decision: ${description}`, "decision", decidedBy)
-        escalationReasons.forEach((r) =>
-          log(`flagged decision "${description}": ${r}`, "escalation", "System"),
-        )
+        await log(`logged a Tier ${tier} decision: ${description}`, "decision", decidedBy)
+        for (const r of escalationReasons) {
+          await log(`flagged decision "${description}": ${r}`, "escalation", "System")
+        }
+        refresh()
       },
-      resolveEscalation: (escalationId) => {
-        const resolve = <T extends { escalations: { id: string; resolved: boolean }[] }>(
-          arr: T[],
-        ) =>
-          arr.map((item) => ({
-            ...item,
-            escalations: item.escalations.map((e) =>
-              e.id === escalationId ? { ...e, resolved: true } : e,
-            ),
-          }))
-        setEvents((prev) => resolve(prev) as EventItem[])
-        setDocuments((prev) => resolve(prev) as DocumentItem[])
-        setDecisions((prev) => resolve(prev) as Decision[])
-        log(`resolved an escalation flag`, "escalation", role)
+
+      resolveEscalation: async (escalationId) => {
+        await supabase
+          .from("escalations")
+          .update({ resolved: true })
+          .eq("id", escalationId)
+        await log(`resolved an escalation flag`, "escalation", currentUserName)
+        refresh()
       },
     }
-  }, [role, tracker, events, documents, decisions, activity])
+  }, [
+    role,
+    currentUserName,
+    isLoading,
+    tracker,
+    events,
+    documents,
+    decisions,
+    activity,
+    log,
+    refresh,
+  ])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

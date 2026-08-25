@@ -1,5 +1,7 @@
 export type Role = "President" | "Officer" | "Reviewer"
 
+export const ROLES: Role[] = ["President", "Officer", "Reviewer"]
+
 export type Department =
   | "Membership"
   | "Marketing"
