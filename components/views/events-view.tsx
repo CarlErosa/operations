@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { ArrowRight, Clock, Flag, X } from "lucide-react"
+import { useCallback, useState } from "react"
+import { ArrowRight, Clock, Flag, Plus, X } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
@@ -14,19 +14,44 @@ import {
   urgencyOf,
 } from "@/lib/dates"
 import { departmentColor, urgencyTone } from "@/lib/ui-maps"
-import { EVENT_STAGES, type EventItem } from "@/lib/types"
+import { DEPARTMENTS, EVENT_STAGES, type Department, type EventItem, type EventStage } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 export function EventsView() {
-  const { events } = useStore()
+  const { events, setEventStage } = useStore()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [dragOverStage, setDragOverStage] = useState<EventStage | null>(null)
   const selected = events.find((e) => e.id === selectedId) ?? null
+
+  const onDragOver = useCallback((e: React.DragEvent, stage: EventStage) => {
+    e.preventDefault()
+    setDragOverStage(stage)
+  }, [])
+
+  const onDragLeave = useCallback(() => setDragOverStage(null), [])
+
+  const onDrop = useCallback(
+    (e: React.DragEvent, stage: EventStage) => {
+      e.preventDefault()
+      setDragOverStage(null)
+      const id = e.dataTransfer.getData("text/plain")
+      if (id) setEventStage(id, stage)
+    },
+    [setEventStage],
+  )
 
   return (
     <div>
       <PageHeader
         title="Events"
         description="Event pipeline across the 7 SOP stages. Cards warn when the lead-time deadline is near."
+        actions={
+          <Button size="sm" onClick={() => setFormOpen(true)}>
+            <Plus />
+            Add Event
+          </Button>
+        }
       />
       <div className="overflow-x-auto p-6">
         <div className="flex min-w-max gap-3">
@@ -45,9 +70,13 @@ export function EventsView() {
                   </span>
                 </div>
                 <div
+                  onDragOver={(e) => onDragOver(e, stage)}
+                  onDragLeave={onDragLeave}
+                  onDrop={(e) => onDrop(e, stage)}
                   className={cn(
-                    "flex min-h-24 flex-1 flex-col gap-2 rounded-lg border border-dashed border-border p-2",
+                    "flex min-h-24 flex-1 flex-col gap-2 rounded-lg border border-dashed border-border p-2 transition-colors",
                     isApproval && "border-brand/40 bg-brand/5",
+                    dragOverStage === stage && "border-ring bg-accent/50",
                   )}
                 >
                   {items.map((e) => (
@@ -67,6 +96,123 @@ export function EventsView() {
       {selected && (
         <EventDetail event={selected} onClose={() => setSelectedId(null)} />
       )}
+      {formOpen && <EventForm onClose={() => setFormOpen(false)} />}
+    </div>
+  )
+}
+
+function EventForm({ onClose }: { onClose: () => void }) {
+  const { addEvent } = useStore()
+  const [name, setName] = useState("")
+  const [department, setDepartment] = useState<Department>("Operations")
+  const [owner, setOwner] = useState("")
+  const [targetDate, setTargetDate] = useState("")
+  const [notes, setNotes] = useState("")
+  const [error, setError] = useState("")
+
+  function submit() {
+    if (!name.trim()) {
+      setError("An event name is required.")
+      return
+    }
+    if (!owner.trim()) {
+      setError("An owner is required.")
+      return
+    }
+    if (!targetDate) {
+      setError("A target date is required.")
+      return
+    }
+    addEvent({
+      name: name.trim(),
+      department,
+      owner: owner.trim(),
+      targetDate,
+      notes: notes.trim(),
+    })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-foreground/20" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <h2 className="text-sm font-semibold">Add an event</h2>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+            <X />
+          </Button>
+        </div>
+
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-5">
+          <Field label="Event name">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. TechSummit 2027"
+              className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Department">
+              <select
+                value={department}
+                onChange={(e) => setDepartment(e.target.value as Department)}
+                className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Target date">
+              <input
+                type="date"
+                value={targetDate}
+                onChange={(e) => setTargetDate(e.target.value)}
+                className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+            </Field>
+          </div>
+
+          <Field label="Owner">
+            <input
+              value={owner}
+              onChange={(e) => setOwner(e.target.value)}
+              placeholder="Officer name"
+              className="h-9 w-full rounded-md border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </Field>
+
+          <Field label="Notes">
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Brief description or scope…"
+              className="w-full resize-none rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </Field>
+
+          <p className="text-xs text-muted-foreground">
+            New events start in the <span className="font-medium">Concept</span> stage.
+          </p>
+
+          {error && <p className="text-sm text-danger">{error}</p>}
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3.5">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={submit}>
+            Add event
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -84,8 +230,10 @@ function EventCard({
 
   return (
     <button
+      draggable
+      onDragStart={(e) => e.dataTransfer.setData("text/plain", event.id)}
       onClick={onClick}
-      className="flex flex-col gap-2 rounded-md border border-border bg-card p-2.5 text-left shadow-sm transition-colors hover:border-ring"
+      className="flex flex-col gap-2 rounded-md border border-border bg-card p-2.5 text-left shadow-sm transition-colors hover:border-ring cursor-grab active:cursor-grabbing"
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-medium leading-snug text-pretty">
@@ -248,6 +396,23 @@ function EventDetail({
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium text-foreground">
+        {label}
+      </label>
+      {children}
     </div>
   )
 }

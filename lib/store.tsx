@@ -21,11 +21,13 @@ import type {
   ActivityEntry,
   Decision,
   DecisionTier,
+  Department,
   DocumentItem,
   DocumentStage,
   DocumentType,
   EscalationReason,
   EventItem,
+  EventStage,
   Role,
   TrackerItem,
   TrackerStatus,
@@ -80,6 +82,7 @@ interface StoreValue {
 
   updateTrackerStatus: (id: string, status: TrackerStatus) => void
   advanceEventStage: (id: string) => void
+  setEventStage: (id: string, stage: EventStage) => void
   sendForReview: (id: string) => void
   reviewDocument: (id: string, signedFileName: string) => void
   passDocument: (id: string) => void
@@ -90,6 +93,13 @@ interface StoreValue {
     type: DocumentType
     stage: DocumentStage
     preparedBy: string
+  }) => void
+  addEvent: (input: {
+    name: string
+    department: Department
+    owner: string
+    targetDate: string
+    notes: string
   }) => void
   addDecision: (input: {
     description: string
@@ -158,6 +168,14 @@ export function StoreProvider({
         if (next === e.stage) return
         await supabase.from("events").update({ stage: next }).eq("id", id)
         await log(`moved ${e.name} to ${next}`, "stage", currentUserName)
+        refresh()
+      },
+
+      setEventStage: async (id, stage) => {
+        const e = events.find((x) => x.id === id)
+        if (!e || e.stage === stage) return
+        await supabase.from("events").update({ stage }).eq("id", id)
+        await log(`moved ${e.name} to ${stage}`, "stage", currentUserName)
         refresh()
       },
 
@@ -238,6 +256,19 @@ export function StoreProvider({
           version_date: today(),
         })
         await log(`added document "${title}" (${stage})`, "stage", currentUserName)
+        refresh()
+      },
+
+      addEvent: async ({ name, department, owner, targetDate, notes }) => {
+        await supabase.from("events").insert({
+          name,
+          department,
+          stage: "Concept",
+          owner,
+          target_date: targetDate,
+          notes,
+        })
+        await log(`added event "${name}" to Concept`, "stage", currentUserName)
         refresh()
       },
 

@@ -38,7 +38,7 @@ export interface TrackerItem {
 
 export type EventStage =
   | "Concept"
-  | "Logistics/GPOA"
+  | "Logistics"
   | "Marketing Plan"
   | "Internal Review"
   | "Final Approval"
@@ -47,7 +47,7 @@ export type EventStage =
 
 export const EVENT_STAGES: EventStage[] = [
   "Concept",
-  "Logistics/GPOA",
+  "Logistics",
   "Marketing Plan",
   "Internal Review",
   "Final Approval",
