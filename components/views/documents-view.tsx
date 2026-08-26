@@ -26,6 +26,9 @@ import {
   type DocumentType,
 } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
+
+const storage = createClient()
 
 export function DocumentsView() {
   const {
@@ -116,10 +119,7 @@ export function DocumentsView() {
           title="Mark reviewed & e-sign"
           description="containing your reviewer e-signature to complete the review."
           submitLabel="Reviewed & Sign"
-          onSubmit={(fileName) => {
-            reviewDocument(reviewDoc.id, fileName)
-            setReviewId(null)
-          }}
+          onSubmit={(file) => reviewDocument(reviewDoc.id, file)}
           onClose={() => setReviewId(null)}
         />
       )}
@@ -129,10 +129,7 @@ export function DocumentsView() {
           title="Approve & e-sign"
           description="containing your e-signature to finalize approval."
           submitLabel="Approve & Sign"
-          onSubmit={(fileName) => {
-            approveDocument(approveDoc.id, fileName)
-            setApproveId(null)
-          }}
+          onSubmit={(file) => approveDocument(approveDoc.id, file)}
           onClose={() => setApproveId(null)}
         />
       )}
@@ -152,30 +149,41 @@ function SignForm({
   title: string
   description: string
   submitLabel: string
-  onSubmit: (fileName: string) => void
+  onSubmit: (file: File) => Promise<boolean>
   onClose: () => void
 }) {
-  const [fileName, setFileName] = useState("")
+  const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState("")
+  const [uploading, setUploading] = useState(false)
+  const fileName = file?.name ?? ""
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
       setError("Please upload a PDF file.")
-      setFileName("")
+      setFile(null)
+      return
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      setError("PDF must be smaller than 50 MB.")
+      setFile(null)
       return
     }
     setError("")
-    setFileName(file.name)
+    setFile(file)
   }
 
-  function submit() {
-    if (!fileName) {
+  async function submit() {
+    if (!file) {
       setError("Upload the signed PDF before continuing.")
       return
     }
-    onSubmit(fileName)
+    setUploading(true)
+    const saved = await onSubmit(file)
+    setUploading(false)
+    if (!saved) setError("The PDF could not be stored. Please try again.")
+    else onClose()
   }
 
   return (
@@ -303,9 +311,20 @@ function DocumentForm({ onClose }: { onClose: () => void }) {
   const [type, setType] = useState<DocumentType>(DOCUMENT_TYPES[0])
   const [stage, setStage] = useState<DocumentStage>("Draft")
   const [preparedBy, setPreparedBy] = useState("")
+  const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState("")
+  const [saving, setSaving] = useState(false)
 
-  function submit() {
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0]
+    if (!selected) return
+    if (selected.type !== "application/pdf" && !selected.name.toLowerCase().endsWith(".pdf")) return setError("Please upload a PDF file.")
+    if (selected.size > 50 * 1024 * 1024) return setError("PDF must be smaller than 50 MB.")
+    setError("")
+    setFile(selected)
+  }
+
+  async function submit() {
     if (!title.trim()) {
       setError("A document title is required.")
       return
@@ -314,13 +333,15 @@ function DocumentForm({ onClose }: { onClose: () => void }) {
       setError("A preparer is required.")
       return
     }
-    addDocument({
-      title: title.trim(),
-      type,
-      stage,
-      preparedBy: preparedBy.trim(),
-    })
-    onClose()
+    if (!file) {
+      setError("Upload the original PDF before continuing.")
+      return
+    }
+    setSaving(true)
+    const saved = await addDocument({ title: title.trim(), type, stage, preparedBy: preparedBy.trim(), file })
+    setSaving(false)
+    if (saved) onClose()
+    else setError("The document could not be stored. Please try again.")
   }
 
   return (
@@ -373,6 +394,14 @@ function DocumentForm({ onClose }: { onClose: () => void }) {
             </Field>
           </div>
 
+          <Field label="Original PDF">
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border bg-background px-3 py-3 text-sm hover:border-ring">
+              <Upload className="size-4 text-muted-foreground" />
+              <span className="truncate">{file?.name ?? "Choose a PDF"}</span>
+              <input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={onFile} />
+            </label>
+          </Field>
+
           <Field label="Prepared by">
             <input
               value={preparedBy}
@@ -389,8 +418,8 @@ function DocumentForm({ onClose }: { onClose: () => void }) {
           <Button variant="outline" size="sm" onClick={onClose}>
             Cancel
           </Button>
-          <Button size="sm" onClick={submit}>
-            Add document
+          <Button size="sm" onClick={submit} disabled={saving}>
+            {saving ? "Saving…" : "Add document"}
           </Button>
         </div>
       </div>
@@ -581,14 +610,11 @@ function DocumentDetail({
             <SignatoryChain doc={doc} />
           </div>
 
-          {(doc.reviewedFileName || doc.signedFileName) && (
+          {(doc.draftFilePath || doc.reviewedFilePath || doc.signedFilePath) && (
             <div className="space-y-2">
-              {doc.reviewedFileName && (
-                <SignedFile label="Reviewer signed PDF" fileName={doc.reviewedFileName} />
-              )}
-              {doc.signedFileName && (
-                <SignedFile label="Approver signed PDF" fileName={doc.signedFileName} />
-              )}
+              {doc.draftFilePath && <StoredFile label="Original PDF" fileName={doc.title + ".pdf"} path={doc.draftFilePath} />}
+              {doc.reviewedFilePath && doc.reviewedFileName && <StoredFile label="Reviewer signed PDF" fileName={doc.reviewedFileName} path={doc.reviewedFilePath} />}
+              {doc.signedFilePath && doc.signedFileName && <StoredFile label="Approver signed PDF" fileName={doc.signedFileName} path={doc.signedFilePath} />}
             </div>
           )}
 
@@ -629,15 +655,23 @@ function DocumentDetail({
   )
 }
 
-function SignedFile({ label, fileName }: { label: string; fileName: string }) {
+function StoredFile({ label, fileName, path }: { label: string; fileName: string; path: string }) {
+  const [opening, setOpening] = useState(false)
+  async function openFile() {
+    setOpening(true)
+    const { data, error } = await storage.storage.from("documents").createSignedUrl(path, 300)
+    setOpening(false)
+    if (error || !data?.signedUrl) return
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer")
+  }
   return (
-    <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/5 p-3">
+    <button type="button" onClick={openFile} disabled={opening} className="flex w-full items-center gap-2 rounded-md border border-success/30 bg-success/5 p-3 text-left hover:bg-success/10 disabled:opacity-60">
       <FileCheck className="size-5 shrink-0 text-success" />
-      <div className="min-w-0">
-        <h3 className="text-xs font-medium text-foreground">{label}</h3>
-        <p className="truncate text-sm text-muted-foreground">{fileName}</p>
-      </div>
-    </div>
+      <span className="min-w-0">
+        <span className="block text-xs font-medium text-foreground">{label}</span>
+        <span className="block truncate text-sm text-muted-foreground">{opening ? "Opening…" : fileName}</span>
+      </span>
+    </button>
   )
 }
 

@@ -110,6 +110,9 @@ export interface DocumentItem {
   failReason?: string
   reviewedFileName?: string
   signedFileName?: string
+  draftFilePath?: string
+  reviewedFilePath?: string
+  signedFilePath?: string
   escalations: Escalation[]
 }
 
