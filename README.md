@@ -70,7 +70,6 @@ The app expects a Supabase project with these tables (columns are inferred from 
 | `activity` | Audit log: `actor`, `message`, `kind`, `created_at` |
 | `tetris_scores` | `user_id`, `name`, `score` (for the sidebar easter egg) |
 
-Row-level security should be configured so that write access (especially on `documents`, `decisions`, and `escalations`) matches the role rules the UI enforces — the frontend does **not** re-check roles against the database, so RLS is the actual security boundary. There are no migration files in this repo yet; schema currently lives only in the connected Supabase project.
 
 ## Scripts
 
