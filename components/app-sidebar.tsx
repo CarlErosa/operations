@@ -14,6 +14,7 @@ import {
   ListTodo,
   TriangleAlert,
 } from "lucide-react"
+import { TetrisGame } from "@/components/tetris-game"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 
@@ -114,6 +115,7 @@ export function AppSidebar({
             </div>
             <div className="text-xs text-muted-foreground">{role}</div>
           </div>
+          <TetrisGame />
           <button
             type="button"
             onClick={handleSignOut}
