@@ -40,6 +40,16 @@ function today() {
   return new Date().toISOString().slice(0, 10)
 }
 
+async function uploadDocumentFile(documentId: string, kind: "draft" | "reviewed" | "signed", file: File) {
+  const path = `${documentId}/${kind}-${crypto.randomUUID()}.pdf`
+  const { error } = await supabase.storage.from("documents").upload(path, file, {
+    contentType: "application/pdf",
+    upsert: false,
+  })
+  if (error) throw error
+  return path
+}
+
 interface BoardData {
   tracker: TrackerItem[]
   events: EventItem[]
@@ -92,16 +102,17 @@ interface StoreValue {
   advanceEventStage: (id: string) => void
   setEventStage: (id: string, stage: EventStage) => void
   sendForReview: (id: string) => void
-  reviewDocument: (id: string, signedFileName: string) => void
+  reviewDocument: (id: string, file: File) => Promise<boolean>
   passDocument: (id: string) => void
   failDocument: (id: string, reason: string) => void
-  approveDocument: (id: string, signedFileName: string) => void
+  approveDocument: (id: string, file: File) => Promise<boolean>
   addDocument: (input: {
     title: string
     type: DocumentType
     stage: DocumentStage
     preparedBy: string
-  }) => void
+    file: File
+  }) => Promise<boolean>
   addEvent: (input: {
     name: string
     department: Department
@@ -225,19 +236,20 @@ export function StoreProvider({
         refresh()
       },
 
-      reviewDocument: async (id, signedFileName) => {
+      reviewDocument: async (id, file) => {
         const d = documents.find((x) => x.id === id)
-        if (!d || d.stage !== "Reviewing") return
-        await supabase
-          .from("documents")
-          .update({
-            stage: "Reviewed",
-            reviewed_by: currentUserName,
-            reviewed_file_name: signedFileName,
-          })
-          .eq("id", id)
-        await log(`reviewed & e-signed ${d.title}`, "stage", currentUserName)
-        refresh()
+        if (!d || d.stage !== "Reviewing") return false
+        try {
+          const path = await uploadDocumentFile(id, "reviewed", file)
+          const res = await supabase.from("documents").update({ stage: "Reviewed", reviewed_by: currentUserName, reviewed_file_name: file.name, reviewed_file_path: path }).eq("id", id)
+          if (res.error) throw res.error
+          await log(`reviewed & e-signed ${d.title}`, "stage", currentUserName)
+          refresh()
+          return true
+        } catch (error) {
+          console.error("Failed to upload reviewer document:", error)
+          return false
+        }
       },
 
       passDocument: async (id) => {
@@ -267,31 +279,36 @@ export function StoreProvider({
         refresh()
       },
 
-      approveDocument: async (id, signedFileName) => {
+      approveDocument: async (id, file) => {
         const d = documents.find((x) => x.id === id)
-        if (!d || d.stage !== "Up for Approval") return
-        await supabase
-          .from("documents")
-          .update({
-            stage: "Approved",
-            approved_by: currentUserName,
-            signed_file_name: signedFileName,
-          })
-          .eq("id", id)
-        await log(`approved & e-signed ${d.title}`, "stage", currentUserName)
-        refresh()
+        if (!d || d.stage !== "Up for Approval") return false
+        try {
+          const path = await uploadDocumentFile(id, "signed", file)
+          const res = await supabase.from("documents").update({ stage: "Approved", approved_by: currentUserName, signed_file_name: file.name, signed_file_path: path }).eq("id", id)
+          if (res.error) throw res.error
+          await log(`approved & e-signed ${d.title}`, "stage", currentUserName)
+          refresh()
+          return true
+        } catch (error) {
+          console.error("Failed to upload approval document:", error)
+          return false
+        }
       },
 
-      addDocument: async ({ title, type, stage, preparedBy }) => {
-        await supabase.from("documents").insert({
-          title,
-          type,
-          stage,
-          prepared_by: preparedBy,
-          version_date: today(),
-        })
-        await log(`added document "${title}" (${stage})`, "stage", currentUserName)
-        refresh()
+      addDocument: async ({ title, type, stage, preparedBy, file }) => {
+        try {
+          const { data: inserted, error } = await supabase.from("documents").insert({ title, type, stage, prepared_by: preparedBy, version_date: today() }).select("id").single()
+          if (error || !inserted) throw error ?? new Error("Document was not created")
+          const path = await uploadDocumentFile(inserted.id, "draft", file)
+          const update = await supabase.from("documents").update({ draft_file_path: path }).eq("id", inserted.id)
+          if (update.error) throw update.error
+          await log(`added document "${title}" (${stage})`, "stage", currentUserName)
+          refresh()
+          return true
+        } catch (error) {
+          console.error("Failed to store document:", error)
+          return false
+        }
       },
 
       addEvent: async ({ name, department, owner, targetDate, notes }) => {

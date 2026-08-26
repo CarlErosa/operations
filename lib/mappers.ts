@@ -63,6 +63,9 @@ export function mapDocument(row: any, esc: EscalationRow[]): DocumentItem {
     failReason: row.fail_reason ?? undefined,
     reviewedFileName: row.reviewed_file_name ?? undefined,
     signedFileName: row.signed_file_name ?? undefined,
+    draftFilePath: row.draft_file_path ?? undefined,
+    reviewedFilePath: row.reviewed_file_path ?? undefined,
+    signedFilePath: row.signed_file_path ?? undefined,
     escalations: escFor(esc, "document_id", row.id),
   }
 }
