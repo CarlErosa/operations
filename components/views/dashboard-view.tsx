@@ -100,8 +100,8 @@ export function DashboardView({
         title="Dashboard"
         description="Operational snapshot for the ICpEP.SE executive team."
       />
-      <div className="space-y-6 p-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="space-y-6 p-4 sm:p-6">
+        <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 lg:grid-cols-4">
           {cards.map((c) => (
             <button
               key={c.label}

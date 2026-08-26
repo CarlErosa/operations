@@ -181,5 +181,11 @@
   }
   body {
     @apply bg-background text-foreground;
+    min-width: 320px;
+    overflow-x: hidden;
+  }
+
+  button, a, input, select, textarea {
+    touch-action: manipulation;
   }
 }

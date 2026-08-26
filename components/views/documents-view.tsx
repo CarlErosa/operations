@@ -63,7 +63,7 @@ export function DocumentsView() {
           </Button>
         }
       />
-      <div className="space-y-6 p-6">
+      <div className="space-y-6 p-4 sm:p-6">
         {DOCUMENT_STAGES.map((stage) => {
           const items = documents.filter((d) => d.stage === stage)
           if (items.length === 0) return null
@@ -365,7 +365,7 @@ function DocumentForm({ onClose }: { onClose: () => void }) {
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Type">
               <select
                 value={type}
