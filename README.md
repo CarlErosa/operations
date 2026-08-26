@@ -2,7 +2,6 @@
 
 An internal operations workspace for **ICPEP.SE–PUP** — a single place for the exec team to track deliverables, run the event pipeline, manage document sign-offs, log decisions, and flag escalations that need President attention.
 
-Built with [v0](https://v0.app) and backed by [Supabase](https://supabase.com) (Postgres + Auth).
 
 ## Features
 
