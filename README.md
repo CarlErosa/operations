@@ -102,20 +102,3 @@ lib/
 middleware.ts              # refreshes the Supabase session on every request
 ```
 
-## Known issues / QA notes
-
-A few things worth fixing before this gets much bigger:
-
-- **Two type mismatches ship silently.** `next.config.mjs` sets `typescript: { ignoreBuildErrors: true }`, so `next build` succeeds even though `npx tsc --noEmit` currently reports 4 errors:
-  - `EventStage` in `lib/types.ts` still lists `"Logistics"`, but `EVENT_STAGES`, `seed-data.ts`, and the rest of the app all use `"Logistics/GPOA"`. Fix the type to match.
-  - `decisions-view.tsx` does `useState(role)` for the "Decided by" field, so TypeScript infers its type as `Role` instead of `string` — then flags the free-text `onChange` handler. Should be `useState<string>(role)`.
-  - `lib/mappers.ts`'s `escFor()` passes a raw `string` through for `Escalation.reason`, which is actually typed as a closed union (`EscalationReason`). Worth validating/narrowing at the mapper boundary.
-- **Supabase mutations don't check `.error`.** Every `.update()` / `.insert()` in `lib/store.tsx` assumes success and just calls `refresh()`. A failed write currently looks like a successful one to the user.
-- **No test suite** — no framework, no test files, no test script.
-- **Some dead/duplicated code**: `RoleSwitcher` in `app-sidebar.tsx` is defined but never rendered; the `Field` label-wrapper component is copy-pasted in three separate files instead of shared.
-- **No `.env.example`** in the repo, so a new contributor has to reverse-engineer the required env vars from `lib/supabase/*.ts`. Consider committing one (documented above).
-- **No schema/migrations in-repo** — the 8 tables above only exist in whatever Supabase project this is currently pointed at.
-- Next.js 16 flags the `middleware.ts` convention as deprecated in favor of `proxy.ts`; it still works but will likely need to migrate (`npx @next/codemod@canary middleware-to-proxy .`).
-- `next/font/google` fetches Geist and Geist Mono at build time — a build will fail in any environment without outbound access to `fonts.googleapis.com` (e.g. an offline CI runner). Self-hosting the fonts with `next/font/local` would remove that dependency.
-
-None of the above blocked `npm install` or `npm run dev` — the app runs. They're type-safety, security, and maintainability gaps rather than functional breakage.
