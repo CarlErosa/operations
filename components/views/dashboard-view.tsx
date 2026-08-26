@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { isThisWeek } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import type { ViewKey } from "@/components/app-sidebar"
+import { TetrisGame } from "@/components/tetris-game"
 
 function calendarKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
@@ -172,7 +173,7 @@ export function DashboardView({
   return (
     <div>
       <PageHeader
-        title="Dashboard"
+        title={<span className="flex items-center gap-2">Dashboard <TetrisGame /></span>}
         description="Operational snapshot for the ICpEP.SE executive team."
       />
       <div className="space-y-6 p-4 sm:p-6">
