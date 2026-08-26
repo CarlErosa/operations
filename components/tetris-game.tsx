@@ -1,9 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { Gamepad2, Pause, Play, RotateCcw, Trophy, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+import { Gamepad2, Pause, Play, RotateCcw, Trophy, X } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 type Cell = string | null
 type Piece = { shape: number[][]; color: string }
@@ -40,6 +41,17 @@ function clearLines(board: Cell[][]) {
   return { board: [...Array.from({ length: cleared }, () => Array<Cell>(BOARD_W).fill(null)), ...kept], cleared }
 }
 
+async function fetchLeaderboard(): Promise<Score[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("tetris_scores")
+    .select("name, score")
+    .order("score", { ascending: false })
+    .limit(5)
+  if (error || !data) return []
+  return data
+}
+
 export function TetrisGame() {
   const [open, setOpen] = useState(false)
   const [board, setBoard] = useState(emptyBoard)
@@ -50,9 +62,8 @@ export function TetrisGame() {
   const [lines, setLines] = useState(0)
   const [paused, setPaused] = useState(false)
   const [gameOver, setGameOver] = useState(false)
-  const [leaderboard, setLeaderboard] = useState<Score[]>([
-    { name: "M. Santos", score: 1280 }, { name: "J. Cruz", score: 940 }, { name: "A. Reyes", score: 720 },
-  ])
+  const [leaderboard, setLeaderboard] = useState<Score[]>([])
+  const [submitting, setSubmitting] = useState(false)
 
   const level = Math.floor(lines / 5) + 1
   const speed = Math.max(140, 650 - (level - 1) * 65)
@@ -87,9 +98,12 @@ export function TetrisGame() {
     return () => window.clearInterval(timer)
   }, [open, paused, gameOver, speed, move])
 
+  // Load the shared leaderboard from Supabase whenever the modal opens
   useEffect(() => {
     if (!open) return
-    try { const saved = JSON.parse(localStorage.getItem("icpep-tetris-leaderboard") ?? "null"); if (Array.isArray(saved)) setLeaderboard(saved) } catch { /* ignore malformed local data */ }
+    let cancelled = false
+    fetchLeaderboard().then((data) => { if (!cancelled) setLeaderboard(data) })
+    return () => { cancelled = true }
   }, [open])
 
   useEffect(() => {
@@ -98,10 +112,33 @@ export function TetrisGame() {
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey)
   }, [open, move, turn])
 
+  // Submit the finished score to Supabase, then refresh the leaderboard
   useEffect(() => {
     if (!gameOver || score <= 0) return
-    const next = [...leaderboard, { name: "You", score }].sort((a, b) => b.score - a.score).slice(0, 5)
-    setLeaderboard(next); localStorage.setItem("icpep-tetris-leaderboard", JSON.stringify(next))
+    let cancelled = false
+    setSubmitting(true)
+
+    const submit = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setSubmitting(false); return }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single()
+
+      const name = profile?.full_name || "Member"
+
+      await supabase.from("tetris_scores").insert({ user_id: user.id, name, score })
+
+      const data = await fetchLeaderboard()
+      if (!cancelled) { setLeaderboard(data); setSubmitting(false) }
+    }
+
+    submit()
+    return () => { cancelled = true }
   }, [gameOver, score])
 
   return (
@@ -114,7 +151,7 @@ export function TetrisGame() {
           <div className="flex items-center justify-between border-b border-border px-4 py-3"><div><h2 id="tetris-title" className="flex items-center gap-2 text-base font-semibold"><Gamepad2 className="size-4 text-brand" />ICpEP Tetris</h2><p className="text-xs text-muted-foreground">Clear lines. Beat the board.</p></div><Button variant="ghost" size="icon" aria-label="Close Tetris" onClick={() => setOpen(false)}><X /></Button></div>
           <div className="grid gap-5 p-4 md:grid-cols-[minmax(0,1fr)_180px]">
             <div className="flex flex-col items-center gap-3"><div className="grid aspect-[10/18] w-full max-w-[260px] grid-cols-10 gap-px rounded-lg border border-border bg-background p-1">{displayBoard.flatMap((row, rowIndex) => row.map((cell, colIndex) => <span key={`${rowIndex}-${colIndex}`} className={cn("rounded-[2px] bg-muted/20", cell)} />))}</div><div className="flex flex-wrap justify-center gap-2"><Button size="sm" variant="outline" onClick={() => move(-1, 0)} aria-label="Move left">←</Button><Button size="sm" variant="outline" onClick={() => move(0, 1)} aria-label="Drop">↓</Button><Button size="sm" variant="outline" onClick={turn} aria-label="Rotate">↻</Button><Button size="sm" variant="outline" onClick={() => move(1, 0)} aria-label="Move right">→</Button></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setPaused((value) => !value)}>{paused ? <Play data-icon="inline-start" /> : <Pause data-icon="inline-start" />}{paused ? "Resume" : "Pause"}</Button><Button size="sm" variant="outline" onClick={reset}><RotateCcw data-icon="inline-start" />Restart</Button></div></div>
-            <aside className="flex flex-col gap-3"><div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-md border border-border p-2"><p className="text-[10px] uppercase text-muted-foreground">Score</p><p className="font-mono text-lg font-semibold">{score}</p></div><div className="rounded-md border border-border p-2"><p className="text-[10px] uppercase text-muted-foreground">Lines</p><p className="font-mono text-lg font-semibold">{lines}</p></div><div className="rounded-md border border-border p-2"><p className="text-[10px] uppercase text-muted-foreground">Level</p><p className="font-mono text-lg font-semibold">{level}</p></div></div><div className="rounded-md border border-border p-3"><h3 className="flex items-center gap-2 text-sm font-semibold"><Trophy className="size-4 text-warning-foreground" />Leaderboard</h3><ol className="mt-3 flex flex-col gap-2">{leaderboard.map((entry, index) => <li key={`${entry.name}-${index}`} className="flex items-center justify-between gap-2 text-xs"><span className="flex min-w-0 items-center gap-2"><span className="font-mono text-muted-foreground">{index + 1}</span><span className="truncate">{entry.name}</span></span><span className="font-mono tabular-nums text-muted-foreground">{entry.score}</span></li>)}</ol></div>{gameOver && <div className="rounded-md border border-danger/40 bg-danger/10 p-3 text-center"><p className="text-sm font-semibold text-danger">Game over</p><p className="mt-1 text-xs text-muted-foreground">Restart to play again.</p></div>}<p className="text-center text-[10px] text-muted-foreground">Arrow keys move · Space pauses</p></aside>
+            <aside className="flex flex-col gap-3"><div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-md border border-border p-2"><p className="text-[10px] uppercase text-muted-foreground">Score</p><p className="font-mono text-lg font-semibold">{score}</p></div><div className="rounded-md border border-border p-2"><p className="text-[10px] uppercase text-muted-foreground">Lines</p><p className="font-mono text-lg font-semibold">{lines}</p></div><div className="rounded-md border border-border p-2"><p className="text-[10px] uppercase text-muted-foreground">Level</p><p className="font-mono text-lg font-semibold">{level}</p></div></div><div className="rounded-md border border-border p-3"><h3 className="flex items-center gap-2 text-sm font-semibold"><Trophy className="size-4 text-warning-foreground" />Leaderboard</h3><ol className="mt-3 flex flex-col gap-2">{leaderboard.length === 0 && <li className="text-xs text-muted-foreground">No scores yet — be the first.</li>}{leaderboard.map((entry, index) => <li key={`${entry.name}-${index}`} className="flex items-center justify-between gap-2 text-xs"><span className="flex min-w-0 items-center gap-2"><span className="font-mono text-muted-foreground">{index + 1}</span><span className="truncate">{entry.name}</span></span><span className="font-mono tabular-nums text-muted-foreground">{entry.score}</span></li>)}</ol></div>{gameOver && <div className="rounded-md border border-danger/40 bg-danger/10 p-3 text-center"><p className="text-sm font-semibold text-danger">Game over</p><p className="mt-1 text-xs text-muted-foreground">{submitting ? "Saving your score…" : "Restart to play again."}</p></div>}<p className="text-center text-[10px] text-muted-foreground">Arrow keys move · Space pauses</p></aside>
           </div>
         </div>
       </div>}
