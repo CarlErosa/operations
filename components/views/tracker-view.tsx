@@ -40,7 +40,7 @@ export function TrackerView() {
           </Button>
         }
       />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <FilterSelect
             value={ownerFilter}
@@ -60,8 +60,8 @@ export function TrackerView() {
           </span>
         </div>
 
-        <div className="rounded-lg border border-border">
-          <table className="w-full border-collapse text-sm">
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="min-w-[760px] w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium text-muted-foreground">
                 <th className="px-3 py-2 font-medium">Deliverable</th>
@@ -272,7 +272,7 @@ function TrackerItemForm({ onClose }: { onClose: () => void }) {
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Owner">
               <input
                 value={owner}
@@ -291,7 +291,7 @@ function TrackerItemForm({ onClose }: { onClose: () => void }) {
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Target date">
               <input
                 type="date"

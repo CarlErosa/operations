@@ -25,7 +25,7 @@ export type ViewKey =
   | "decisions"
   | "escalations"
 
-const NAV: { key: ViewKey; label: string; icon: typeof LayoutDashboard }[] = [
+export const NAV: { key: ViewKey; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "tracker", label: "Tracker", icon: ListTodo },
   { key: "events", label: "Events", icon: Columns3 },
@@ -61,7 +61,7 @@ export function AppSidebar({
   )
 
   return (
-    <aside className="flex h-dvh w-60 shrink-0 flex-col border-r border-border bg-sidebar">
+    <aside className="hidden h-dvh w-60 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
       <div className="flex items-center gap-2.5 px-4 py-4">
         <img
           src="/icpep_logo.jpg"

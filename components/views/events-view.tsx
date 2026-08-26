@@ -54,7 +54,7 @@ export function EventsView() {
           </Button>
         }
       />
-      <div className="overflow-x-auto p-6">
+      <div className="overflow-x-auto p-4 sm:p-6">
         <div className="flex min-w-max gap-3">
           {EVENT_STAGES.map((stage) => {
             const items = events.filter((e) => e.stage === stage)
@@ -174,7 +174,7 @@ function EventForm({ event, onClose }: { event?: EventItem; onClose: () => void 
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Department">
               <select
                 value={department}
