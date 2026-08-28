@@ -101,6 +101,10 @@
   --danger-foreground: oklch(0.985 0 0);
   --info: oklch(0.6 0.12 250);
   --info-foreground: oklch(0.985 0 0);
+  --auth-heading: oklch(1 0 0);
+  --auth-subtitle: oklch(0.94 0.01 270);
+  --auth-glass: oklch(0.06 0.03 270 / 0.48);
+  --auth-glass-border: oklch(1 0 0 / 0.32);
 }
 
 .dark {
@@ -203,6 +207,9 @@
   }
 
   .workspace-enter { animation: workspace-enter 700ms cubic-bezier(.2,.8,.2,1) both; }
+  .auth-heading { color: var(--auth-heading); text-shadow: 0 1px 12px oklch(0 0 0 / 0.45); }
+  .auth-subtitle { color: var(--auth-subtitle); text-shadow: 0 1px 8px oklch(0 0 0 / 0.5); }
+  .auth-glass-card { background: var(--auth-glass); border-color: var(--auth-glass-border); }
   @media (hover: hover) {
     .workspace-enter button:not([aria-label="Open navigation"]), .workspace-enter a { transition: transform 180ms ease, filter 180ms ease; }
     .workspace-enter button:not([aria-label="Open navigation"]):hover, .workspace-enter a:hover { transform: translateY(-1px); filter: brightness(1.06); }

@@ -40,10 +40,10 @@ export function AuthShell({
               className="mx-auto h-10 w-10 rounded-md object-cover"
             />
           </div>
-          <h1 className="text-lg font-semibold text-foreground text-balance">{title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground text-pretty">{subtitle}</p>
+          <h1 className="auth-heading text-lg font-semibold text-balance">{title}</h1>
+          <p className="auth-subtitle mt-1 text-sm text-pretty">{subtitle}</p>
         </div>
-        <div className="rounded-xl border border-border bg-card/88 p-5 shadow-xl backdrop-blur-xl">
+        <div className="auth-glass-card rounded-2xl border p-5 shadow-2xl backdrop-blur-2xl">
           {children}
         </div>
       </div>
