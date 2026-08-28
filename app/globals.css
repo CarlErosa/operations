@@ -183,10 +183,8 @@
     @apply bg-background text-foreground;
     min-width: 320px;
     overflow-x: hidden;
-    background-image: linear-gradient(135deg, oklch(0.08 0.03 270 / 0.82), oklch(0.16 0.06 300 / 0.7)), url('/11zon_resized.jpeg');
-    background-attachment: fixed;
-    background-position: center;
-    background-size: cover;
+    background-image: none;
+    background-color: oklch(1 0 0);
   }
 
   @keyframes workspace-enter {

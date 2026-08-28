@@ -52,7 +52,7 @@ export function OpsShell({
           </div>
         </div>
       )}
-      <div className="workspace-enter flex h-dvh overflow-hidden bg-background/55 text-foreground backdrop-blur-[2px]">
+      <div className="workspace-enter flex h-dvh overflow-hidden bg-background text-foreground">
         <AppSidebar active={view} onNavigate={navigate} />
         <main className="min-w-0 flex-1 overflow-y-auto">
           <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden">
