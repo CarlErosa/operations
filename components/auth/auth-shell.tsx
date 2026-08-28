@@ -43,7 +43,7 @@ export function AuthShell({
           <h1 className="auth-heading text-lg font-semibold text-balance">{title}</h1>
           <p className="auth-subtitle mt-1 text-sm text-pretty">{subtitle}</p>
         </div>
-        <div className="auth-glass-card rounded-2xl border p-5 shadow-2xl backdrop-blur-2xl">
+        <div className="auth-glass-card rounded-2xl border p-5 backdrop-blur-2xl">
           {children}
         </div>
       </div>
