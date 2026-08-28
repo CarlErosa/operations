@@ -9,6 +9,7 @@ import {
   ChevronsUpDown,
   Columns3,
   FileText,
+  Frame,
   Gavel,
   LayoutDashboard,
   ListTodo,
@@ -102,6 +103,15 @@ export function AppSidebar({
             </button>
           )
         })}
+        <a
+          href="https://icpep-frame-it.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+        >
+          <Frame className="size-4 shrink-0" />
+          <span className="flex-1 text-left">FrameIt</span>
+        </a>
       </nav>
 
       <div className="border-t border-border p-2">
