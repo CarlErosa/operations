@@ -183,6 +183,38 @@
     @apply bg-background text-foreground;
     min-width: 320px;
     overflow-x: hidden;
+    background-image: linear-gradient(135deg, oklch(0.08 0.03 270 / 0.82), oklch(0.16 0.06 300 / 0.7)), url('/11zon_resized.jpeg');
+    background-attachment: fixed;
+    background-position: center;
+    background-size: cover;
+  }
+
+  @keyframes workspace-enter {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(220%); }
+  }
+
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 0 0 oklch(0.68 0.2 330 / 0.28); }
+    50% { box-shadow: 0 0 0 8px oklch(0.68 0.2 330 / 0); }
+  }
+
+  .workspace-enter { animation: workspace-enter 700ms cubic-bezier(.2,.8,.2,1) both; }
+  @media (hover: hover) {
+    .workspace-enter button:not([aria-label="Open navigation"]), .workspace-enter a { transition: transform 180ms ease, filter 180ms ease; }
+    .workspace-enter button:not([aria-label="Open navigation"]):hover, .workspace-enter a:hover { transform: translateY(-1px); filter: brightness(1.06); }
+  }
+  .loading-shimmer { position: relative; overflow: hidden; }
+  .loading-shimmer::after { content: ''; position: absolute; inset: 0; width: 45%; background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.14), transparent); animation: shimmer 1.4s ease-in-out infinite; }
+  .pulse-ring { animation: pulse-ring 1.8s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
   }
 
   button, a, input, select, textarea {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { NAV } from "@/components/app-sidebar"
@@ -24,6 +24,12 @@ export function OpsShell({
 }) {
   const [view, setView] = useState<ViewKey>("dashboard")
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsLoading(false), 850)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   function navigate(next: ViewKey) {
     setView(next)
@@ -32,7 +38,21 @@ export function OpsShell({
 
   return (
     <StoreProvider role={role} currentUserName={currentUserName}>
-      <div className="flex h-dvh overflow-hidden bg-background text-foreground">
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/92 backdrop-blur-xl" role="status" aria-live="polite">
+          <div className="flex w-64 flex-col items-center gap-5 text-center">
+            <div className="pulse-ring relative flex size-16 items-center justify-center rounded-2xl border border-brand/40 bg-brand/15 p-2 shadow-2xl">
+              <img src="/icpep_logo.jpg" alt="ICpEP logo" className="size-full rounded-xl object-cover" />
+            </div>
+            <div className="flex w-full flex-col gap-2">
+              <p className="text-sm font-semibold tracking-tight">Preparing your workspace</p>
+              <div className="loading-shimmer h-1.5 w-full rounded-full bg-muted" />
+              <p className="text-xs text-muted-foreground">Syncing executive operations</p>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="workspace-enter flex h-dvh overflow-hidden bg-background/55 text-foreground backdrop-blur-[2px]">
         <AppSidebar active={view} onNavigate={navigate} />
         <main className="min-w-0 flex-1 overflow-y-auto">
           <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden">

@@ -30,7 +30,7 @@ export function AuthShell({
   children: ReactNode
 }) {
   return (
-    <main className="flex min-h-svh items-center justify-center bg-background p-4">
+    <main className="workspace-enter relative flex min-h-svh items-center justify-center bg-background/55 p-4 backdrop-blur-[2px]">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3">
@@ -43,7 +43,7 @@ export function AuthShell({
           <h1 className="text-lg font-semibold text-foreground text-balance">{title}</h1>
           <p className="mt-1 text-sm text-muted-foreground text-pretty">{subtitle}</p>
         </div>
-        <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+        <div className="rounded-xl border border-border bg-card/88 p-5 shadow-xl backdrop-blur-xl">
           {children}
         </div>
       </div>
