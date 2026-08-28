@@ -30,7 +30,7 @@ export function AuthShell({
   children: ReactNode
 }) {
   return (
-    <main className="workspace-enter relative flex min-h-svh items-center justify-center bg-background/55 bg-[linear-gradient(135deg,oklch(0.08_0.03_270_/_0.7),oklch(0.16_0.06_300_/_0.58)),url('/11zon_resized.jpeg')] bg-cover bg-center bg-fixed p-4 backdrop-blur-[2px]">
+    <main className="workspace-enter relative flex min-h-svh items-center justify-center bg-background/55 bg-[linear-gradient(135deg,oklch(0.08_0.03_270_/_0.7),oklch(0.16_0.06_300_/_0.58)),url('/11zon_resized.jpeg')] bg-cover bg-[position:center_center] bg-fixed p-4 backdrop-blur-[2px]">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3">
