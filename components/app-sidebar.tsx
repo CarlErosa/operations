@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import {
   Check,
   ChevronsUpDown,
+  ClipboardList,
   Columns3,
   FileText,
   Frame,
@@ -121,6 +122,15 @@ export function AppSidebar({
         >
           <Mail className="size-4 shrink-0" />
           <span className="flex-1 text-left">BatchMail</span>
+        </a>
+        <a
+          href="https://icpep-membership-forms.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+        >
+          <ClipboardList className="size-4 shrink-0" />
+          <span className="flex-1 text-left">Membership Forms</span>
         </a>
       </nav>
 
