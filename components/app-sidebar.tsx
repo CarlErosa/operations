@@ -13,6 +13,7 @@ import {
   Gavel,
   LayoutDashboard,
   ListTodo,
+  Mail,
   TriangleAlert,
 } from "lucide-react"
 import { TetrisGame } from "@/components/tetris-game"
@@ -111,6 +112,15 @@ export function AppSidebar({
         >
           <Frame className="size-4 shrink-0" />
           <span className="flex-1 text-left">FrameIt</span>
+        </a>
+        <a
+          href="https://icpep-batchmail.vercel.app/signin"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+        >
+          <Mail className="size-4 shrink-0" />
+          <span className="flex-1 text-left">BatchMail</span>
         </a>
       </nav>
 
