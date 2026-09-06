@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   ListTodo,
   Mail,
+  MailPlus,
   TriangleAlert,
 } from "lucide-react"
 import { TetrisGame } from "@/components/tetris-game"
@@ -131,6 +132,15 @@ export function AppSidebar({
         >
           <ClipboardList className="size-4 shrink-0" />
           <span className="flex-1 text-left">Membership Forms</span>
+        </a>
+        <a
+          href="https://email-template-murex-eight.vercel.app/email.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+        >
+          <MailPlus className="size-4 shrink-0" />
+          <span className="flex-1 text-left">Email Templates</span>
         </a>
       </nav>
 
