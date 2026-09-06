@@ -1,5 +1,6 @@
 "use client"
 
+import { TetrisGame } from "@/components/tetris-game"
 import { useStore } from "@/lib/store"
 import { createClient } from "@/lib/supabase/client"
 import type { Role } from "@/lib/types"
@@ -18,7 +19,6 @@ import {
   MailPlus,
   TriangleAlert,
 } from "lucide-react"
-import { TetrisGame } from "@/components/tetris-game"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 
@@ -107,7 +107,7 @@ export function AppSidebar({
           )
         })}
         <a
-          href="https://icpep-frame-it.vercel.app/"
+          href="https://beta-frameit.vercel.app/"
           target="_blank"
           rel="noopener noreferrer"
           className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
