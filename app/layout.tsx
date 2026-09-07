@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description:
     'Internal operations dashboard for the ICPEP.SE executive team — track deliverables, events, documents, decisions, and escalations.',
   generator: 'v0.app',
-  icons: { icon: '/icpep_logo.jpg' },
+  icons: { icon: '/icpep_new.jpg' },
 }
 
 export const viewport: Viewport = {

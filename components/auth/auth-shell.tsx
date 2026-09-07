@@ -35,7 +35,7 @@ export function AuthShell({
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3">
             <img
-              src="/icpep_logo.jpg"
+              src="/icpep_new.jpg"
               alt="ICpEP logo"
               className="mx-auto h-10 w-10 rounded-md object-cover"
             />

@@ -1,19 +1,18 @@
 "use client"
 
-import { useState } from "react"
-import { Menu } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { NAV } from "@/components/app-sidebar"
+import { AppSidebar, NAV, type ViewKey } from "@/components/app-sidebar"
 import { Button } from "@/components/ui/button"
-import { StoreProvider } from "@/lib/store"
-import { AppSidebar, type ViewKey } from "@/components/app-sidebar"
 import { DashboardView } from "@/components/views/dashboard-view"
-import { TrackerView } from "@/components/views/tracker-view"
-import { EventsView } from "@/components/views/events-view"
-import { DocumentsView } from "@/components/views/documents-view"
 import { DecisionsView } from "@/components/views/decisions-view"
+import { DocumentsView } from "@/components/views/documents-view"
 import { EscalationsView } from "@/components/views/escalations-view"
+import { EventsView } from "@/components/views/events-view"
+import { TrackerView } from "@/components/views/tracker-view"
+import { StoreProvider } from "@/lib/store"
 import type { Role } from "@/lib/types"
+import { cn } from "@/lib/utils"
+import { Menu } from "lucide-react"
+import { useState } from "react"
 
 export function OpsShell({
   role,
@@ -37,7 +36,7 @@ export function OpsShell({
         <main className="min-w-0 flex-1 overflow-y-auto">
           <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden">
             <div className="flex min-w-0 items-center gap-2">
-              <img src="/icpep_logo.jpg" alt="ICpEP logo" className="size-7 rounded-md object-cover" />
+              <img src="/icpep_new.jpg" alt="ICpEP logo" className="size-7 rounded-md object-cover" />
               <span className="truncate text-sm font-semibold">ICPEP.SE SOP</span>
             </div>
             <Button variant="outline" size="icon" aria-label="Open navigation" onClick={() => setMobileNavOpen((open) => !open)}>

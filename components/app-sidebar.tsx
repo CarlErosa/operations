@@ -6,18 +6,18 @@ import { createClient } from "@/lib/supabase/client"
 import type { Role } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
-  Check,
-  ChevronsUpDown,
-  ClipboardList,
-  Columns3,
-  FileText,
-  Frame,
-  Gavel,
-  LayoutDashboard,
-  ListTodo,
-  Mail,
-  MailPlus,
-  TriangleAlert,
+    Check,
+    ChevronsUpDown,
+    ClipboardList,
+    Columns3,
+    FileText,
+    Frame,
+    Gavel,
+    LayoutDashboard,
+    ListTodo,
+    Mail,
+    MailPlus,
+    TriangleAlert,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -69,7 +69,7 @@ export function AppSidebar({
     <aside className="hidden h-dvh w-60 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
       <div className="flex items-center gap-2.5 px-4 py-4">
         <img
-          src="/icpep_logo.jpg"
+          src="/icpep_new.jpg"
           alt="ICpEP logo"
           className="h-8 w-8 rounded-md object-cover"
         />
